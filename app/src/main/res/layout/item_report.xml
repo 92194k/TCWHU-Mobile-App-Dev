@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="16dp"
+    app:cardCornerRadius="16dp"
+    app:strokeColor="#E1BEE7"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/reportTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:drawableStartCompat="@drawable/ic_report"
+            app:drawableTint="#D32F2F"
+            android:drawablePadding="8dp"
+            tools:text="Report from BlueDragon"/>
+
+        <TextView
+            android:id="@+id/reportDetails"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/text_secondary"
+            tools:text="Reported User: StarGazer\nReason: Harassment\nTime: Oct 23, 2025, 8:00 PM"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Take Action:"
+            android:textColor="@color/text_secondary"
+            android:textStyle="bold"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/buttonIssueWarning"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Issue Warning"
+                android:textColor="#FFA000"
+                app:icon="@drawable/ic_report"
+                app:iconTint="#FFA000"
+                app:strokeColor="#FFA000"/>
+
+            <Button
+                android:id="@+id/buttonSuspend"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Suspend (30d)"
+                android:textColor="#F57C00"
+                app:icon="@drawable/ic_clock"
+                app:iconTint="#F57C00"
+                app:strokeColor="#F57C00"/>
+
+            <Button
+                android:id="@+id/buttonBan"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Permanent Ban"
+                android:textColor="#D32F2F"
+                app:icon="@drawable/ic_ban"
+                app:iconTint="#D32F2F"
+                app:strokeColor="#D32F2F"/>
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

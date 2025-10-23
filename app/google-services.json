@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "757266499953",
+    "project_id": "tcwhu-mobile-app",
+    "storage_bucket": "tcwhu-mobile-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:757266499953:android:b550263d54ef360f604ed0",
+        "android_client_info": {
+          "package_name": "com.tcwhu.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjFgen-30oMr2-l_2LyJyP68kkixja3AU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:757266499953:android:e510671f9ea1e746604ed0",
+        "android_client_info": {
+          "package_name": "com.tcwhu.tcwhumobileapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjFgen-30oMr2-l_2LyJyP68kkixja3AU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
