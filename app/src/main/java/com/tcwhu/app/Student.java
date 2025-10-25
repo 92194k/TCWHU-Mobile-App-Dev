@@ -4,23 +4,21 @@ import com.google.firebase.firestore.Exclude;
 
 public class Student {
 
-    @Exclude private String userId; // We use this to hold the Firebase Auth ID
-
-    // These fields will be saved to Firestore
+    @Exclude private String userId;
     private String studentNumber;
     private String nickname;
     private String yearLevel;
     private String interests;
     private String avatar;
     private boolean isVerified;
+    private boolean isBanned;
+    private boolean isSuspended;
     private long createdAt;
 
-    // An empty constructor is required for Firestore to work
+    // Required empty constructor for Firestore
     public Student() {}
 
     // --- Getters and Setters ---
-    // These allow our code to get and set the values for each field
-
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
@@ -41,6 +39,12 @@ public class Student {
 
     public boolean isVerified() { return isVerified; }
     public void setVerified(boolean verified) { this.isVerified = verified; }
+
+    public boolean isBanned() { return isBanned; }
+    public void setBanned(boolean banned) { isBanned = banned; }
+
+    public boolean isSuspended() { return isSuspended; }
+    public void setSuspended(boolean suspended) { isSuspended = suspended; }
 
     public long getCreatedAt() { return createdAt; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }

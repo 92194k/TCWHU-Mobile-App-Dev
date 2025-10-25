@@ -1,6 +1,6 @@
 package com.tcwhu.app;
 
-import android.content.Intent; // Import the Intent class
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.Toast;
@@ -9,6 +9,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.firestore.FirebaseFirestore; // <-- MISSING
+import com.google.firebase.firestore.Query; // <-- MISSING
 
 public class AdminLoginActivity extends AppCompatActivity {
 
@@ -18,10 +20,15 @@ public class AdminLoginActivity extends AppCompatActivity {
     private Button buttonAdminLogin;
     private Button buttonBackToStudent;
 
+    private FirebaseFirestore db; // <-- MISSING
+    private static final String ACCESS_CODE_DOC_ID = "GLOBAL_ACCESS_CODE"; // <-- MISSING
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_login);
+
+        db = FirebaseFirestore.getInstance(); // <-- MISSING
 
         // Find views
         toolbar = findViewById(R.id.toolbar);
@@ -38,11 +45,7 @@ public class AdminLoginActivity extends AppCompatActivity {
 
         // Setup button clicks
         buttonAdminLogin.setOnClickListener(v -> handleAdminLogin());
-
-        buttonBackToStudent.setOnClickListener(v -> {
-            // Simply finish this activity to go back to the Landing screen
-            finish();
-        });
+        buttonBackToStudent.setOnClickListener(v -> finish());
     }
 
     private void handleAdminLogin() {
@@ -54,18 +57,41 @@ public class AdminLoginActivity extends AppCompatActivity {
             return;
         }
 
-        // --- THIS IS THE UPDATED PART --- ✅
-        // For now, we'll use a simple hardcoded check.
-        // A real app would verify this securely against a database.
-        if (username.equals("admin") && accessCode.equals("password123")) {
-            // If login is successful, navigate to the Admin Dashboard
-            Intent intent = new Intent(this, AdminDashboardActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish(); // Close this activity
-        } else {
-            // If login fails, show an error message
-            Toast.makeText(this, "Invalid admin credentials", Toast.LENGTH_SHORT).show();
-        }
+        // 1. Check the global access code (FROM FIRESTORE)
+        db.collection("settings").document(ACCESS_CODE_DOC_ID).get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists() && accessCode.equals(doc.getString("code"))) {
+                        // Global access code is correct, now check if the username is a registered admin
+                        checkAdminUsername(username);
+                    } else {
+                        Toast.makeText(this, "Invalid access code.", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Admin access check failed.", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    // <-- MISSING CHECK ADMIN USERNAME METHOD -->
+    private void checkAdminUsername(String username) {
+        // 2. Query the 'admins' collection for the matching username (email)
+        db.collection("admins").whereEqualTo("email", username).limit(1).get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!querySnapshot.isEmpty()) {
+                        // Username (email) found in the admins collection
+                        Toast.makeText(this, "Admin Login Successful!", Toast.LENGTH_SHORT).show();
+
+                        // Navigate to Admin Dashboard
+                        Intent intent = new Intent(this, AdminDashboardActivity.class);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        Toast.makeText(this, "Admin user not found.", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Admin user check failed.", Toast.LENGTH_SHORT).show();
+                });
     }
 }

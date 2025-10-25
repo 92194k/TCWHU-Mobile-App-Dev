@@ -26,7 +26,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
             finish();
         });
 
-        // --- Student Verification Card ---
+        // --- Student Verification Card (Phase 18) ---
         Button verificationCard = new Button(this);
         verificationCard.setText("Student Verification");
         verificationCard.setOnClickListener(v -> {
@@ -35,7 +35,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         });
         managementGrid.addView(verificationCard);
 
-        // --- Events Management Card ---
+        // --- Events Management Card (Phase 19) ---
         Button eventsCard = new Button(this);
         eventsCard.setText("Events Management");
         eventsCard.setOnClickListener(v -> {
@@ -44,8 +44,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         });
         managementGrid.addView(eventsCard);
 
-        // --- THIS IS THE NEW PART --- ✅
-        // --- Reports Management Card ---
+        // --- Reports Management Card (Phase 20) ---
         Button reportsCard = new Button(this);
         reportsCard.setText("Reports Management");
         reportsCard.setOnClickListener(v -> {
@@ -53,5 +52,32 @@ public class AdminDashboardActivity extends AppCompatActivity {
             startActivity(intent);
         });
         managementGrid.addView(reportsCard);
+
+        // --- User Overview Card (Phase 21) ---
+        Button userOverviewCard = new Button(this);
+        userOverviewCard.setText("User Overview");
+        userOverviewCard.setOnClickListener(v -> {
+            Intent intent = new Intent(AdminDashboardActivity.this, UserOverviewActivity.class);
+            startActivity(intent);
+        });
+        managementGrid.addView(userOverviewCard);
+
+        // --- Activity Logs Card (Phase 22) ---
+        Button logsCard = new Button(this);
+        logsCard.setText("Activity Logs");
+        logsCard.setOnClickListener(v -> {
+            Intent intent = new Intent(AdminDashboardActivity.this, ActivityLogsActivity.class);
+            startActivity(intent);
+        });
+        managementGrid.addView(logsCard);
+
+        // --- Admin Settings Card (Phase 23) --- ✅
+        Button settingsCard = new Button(this);
+        settingsCard.setText("Admin Settings");
+        settingsCard.setOnClickListener(v -> {
+            Intent intent = new Intent(AdminDashboardActivity.this, AdminSettingsActivity.class);
+            startActivity(intent);
+        });
+        managementGrid.addView(settingsCard);
     }
 }

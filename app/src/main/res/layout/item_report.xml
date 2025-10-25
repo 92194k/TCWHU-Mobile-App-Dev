@@ -19,21 +19,22 @@
             android:id="@+id/reportTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:drawablePadding="8dp"
             android:textColor="@color/text_primary"
             android:textSize="18sp"
             android:textStyle="bold"
             app:drawableStartCompat="@drawable/ic_report"
             app:drawableTint="#D32F2F"
-            android:drawablePadding="8dp"
-            tools:text="Report from BlueDragon"/>
+            tools:text="Report from User" />
 
         <TextView
             android:id="@+id/reportDetails"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:lineSpacingExtra="4dp"
             android:textColor="@color/text_secondary"
-            tools:text="Reported User: StarGazer\nReason: Harassment\nTime: Oct 23, 2025, 8:00 PM"/>
+            tools:text="Reported User: User\nReason: Harassment\nTime: Oct 24, 2025, 5:00 PM" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -41,7 +42,7 @@
             android:layout_marginTop="16dp"
             android:text="Take Action:"
             android:textColor="@color/text_secondary"
-            android:textStyle="bold"/>
+            android:textStyle="bold" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -58,7 +59,7 @@
                 android:textColor="#FFA000"
                 app:icon="@drawable/ic_report"
                 app:iconTint="#FFA000"
-                app:strokeColor="#FFA000"/>
+                app:strokeColor="#FFA000" />
 
             <Button
                 android:id="@+id/buttonSuspend"
@@ -70,7 +71,7 @@
                 android:textColor="#F57C00"
                 app:icon="@drawable/ic_clock"
                 app:iconTint="#F57C00"
-                app:strokeColor="#F57C00"/>
+                app:strokeColor="#F57C00" />
 
             <Button
                 android:id="@+id/buttonBan"
@@ -82,7 +83,7 @@
                 android:textColor="#D32F2F"
                 app:icon="@drawable/ic_ban"
                 app:iconTint="#D32F2F"
-                app:strokeColor="#D32F2F"/>
+                app:strokeColor="#D32F2F" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

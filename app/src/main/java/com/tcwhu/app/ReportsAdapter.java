@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHolder> {
 
@@ -19,10 +20,12 @@ public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHold
     }
 
     private List<Report> reportList;
+    private Map<String, String> userNicknameMap; // Map to store user nicknames
     private OnActionListener listener;
 
-    public ReportsAdapter(List<Report> reportList, OnActionListener listener) {
+    public ReportsAdapter(List<Report> reportList, Map<String, String> userNicknameMap, OnActionListener listener) {
         this.reportList = reportList;
+        this.userNicknameMap = userNicknameMap;
         this.listener = listener;
     }
 
@@ -34,7 +37,7 @@ public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHold
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(reportList.get(position), listener);
+        holder.bind(reportList.get(position), userNicknameMap, listener);
     }
 
     @Override
@@ -53,14 +56,16 @@ public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHold
             buttonBan = itemView.findViewById(R.id.buttonBan);
         }
 
-        public void bind(final Report report, final OnActionListener listener) {
-            // In a real app, you would fetch nicknames from the IDs. For now, we show IDs.
-            reportTitle.setText("Report from User ID: " + report.getReporterId());
+        public void bind(final Report report, final Map<String, String> userNicknameMap, final OnActionListener listener) {
+            String reporterName = userNicknameMap.getOrDefault(report.getReporterId(), "Unknown User");
+            String reportedName = userNicknameMap.getOrDefault(report.getReportedId(), "Unknown User");
+
+            reportTitle.setText("Report from " + reporterName);
 
             SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy, h:mm a", Locale.US);
             String formattedDate = formatter.format(new Date(report.getTimestamp()));
 
-            String details = "Reported User ID: " + report.getReportedId() +
+            String details = "Reported User: " + reportedName +
                     "\nReason: " + report.getReason() +
                     "\nTime: " + formattedDate;
             reportDetails.setText(details);
