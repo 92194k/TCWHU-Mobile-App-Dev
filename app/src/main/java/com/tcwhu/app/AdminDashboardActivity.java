@@ -2,8 +2,12 @@ package com.tcwhu.app;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.Button;
 import android.widget.GridLayout;
+import android.widget.ImageView;
+import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 
@@ -17,7 +21,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
         Button buttonLogout = findViewById(R.id.buttonLogout);
         GridLayout managementGrid = findViewById(R.id.managementGrid);
 
-        // Logout button functionality
         buttonLogout.setOnClickListener(v -> {
             FirebaseAuth.getInstance().signOut();
             Intent intent = new Intent(AdminDashboardActivity.this, LandingActivity.class);
@@ -26,58 +29,30 @@ public class AdminDashboardActivity extends AppCompatActivity {
             finish();
         });
 
-        // --- Student Verification Card (Phase 18) ---
-        Button verificationCard = new Button(this);
-        verificationCard.setText("Student Verification");
-        verificationCard.setOnClickListener(v -> {
-            Intent intent = new Intent(AdminDashboardActivity.this, StudentVerificationActivity.class);
-            startActivity(intent);
-        });
-        managementGrid.addView(verificationCard);
+        // Add the management cards with the new, beautiful layout
+        addManagementCard(managementGrid, "Student Verification", R.drawable.ic_check_circle, StudentVerificationActivity.class);
+        addManagementCard(managementGrid, "Reports Management", R.drawable.ic_report, ReportsManagementActivity.class);
+        addManagementCard(managementGrid, "Events Management", R.drawable.ic_events, EventsManagementActivity.class);
+        addManagementCard(managementGrid, "User Overview", R.drawable.ic_users, UserOverviewActivity.class);
+        addManagementCard(managementGrid, "Activity Logs", R.drawable.ic_logs, ActivityLogsActivity.class);
+        addManagementCard(managementGrid, "Admin Settings", R.drawable.ic_settings, AdminSettingsActivity.class);
+    }
 
-        // --- Events Management Card (Phase 19) ---
-        Button eventsCard = new Button(this);
-        eventsCard.setText("Events Management");
-        eventsCard.setOnClickListener(v -> {
-            Intent intent = new Intent(AdminDashboardActivity.this, EventsManagementActivity.class);
-            startActivity(intent);
-        });
-        managementGrid.addView(eventsCard);
+    private void addManagementCard(GridLayout gridLayout, String title, int iconResId, final Class<?> targetActivity) {
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View cardView = inflater.inflate(R.layout.card_management_item, gridLayout, false);
 
-        // --- Reports Management Card (Phase 20) ---
-        Button reportsCard = new Button(this);
-        reportsCard.setText("Reports Management");
-        reportsCard.setOnClickListener(v -> {
-            Intent intent = new Intent(AdminDashboardActivity.this, ReportsManagementActivity.class);
-            startActivity(intent);
-        });
-        managementGrid.addView(reportsCard);
+        ImageView icon = cardView.findViewById(R.id.card_icon);
+        TextView cardTitle = cardView.findViewById(R.id.card_title);
 
-        // --- User Overview Card (Phase 21) ---
-        Button userOverviewCard = new Button(this);
-        userOverviewCard.setText("User Overview");
-        userOverviewCard.setOnClickListener(v -> {
-            Intent intent = new Intent(AdminDashboardActivity.this, UserOverviewActivity.class);
-            startActivity(intent);
-        });
-        managementGrid.addView(userOverviewCard);
+        icon.setImageResource(iconResId);
+        cardTitle.setText(title);
 
-        // --- Activity Logs Card (Phase 22) ---
-        Button logsCard = new Button(this);
-        logsCard.setText("Activity Logs");
-        logsCard.setOnClickListener(v -> {
-            Intent intent = new Intent(AdminDashboardActivity.this, ActivityLogsActivity.class);
+        cardView.setOnClickListener(v -> {
+            Intent intent = new Intent(AdminDashboardActivity.this, targetActivity);
             startActivity(intent);
         });
-        managementGrid.addView(logsCard);
 
-        // --- Admin Settings Card (Phase 23) --- ✅
-        Button settingsCard = new Button(this);
-        settingsCard.setText("Admin Settings");
-        settingsCard.setOnClickListener(v -> {
-            Intent intent = new Intent(AdminDashboardActivity.this, AdminSettingsActivity.class);
-            startActivity(intent);
-        });
-        managementGrid.addView(settingsCard);
+        gridLayout.addView(cardView);
     }
 }

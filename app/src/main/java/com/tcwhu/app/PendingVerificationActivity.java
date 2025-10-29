@@ -2,7 +2,10 @@ package com.tcwhu.app;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
+import android.widget.ImageView; // Import ImageView
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -17,14 +20,20 @@ public class PendingVerificationActivity extends AppCompatActivity {
 
         buttonBackToHome = findViewById(R.id.buttonBackToHome);
 
+        // --- ANIMATION CODE --- ✅
+        // Find the clock icon view (assuming ID clockIcon is added to XML)
+        ImageView clockIcon = findViewById(R.id.clockIcon);
+        Animation rotateAnimation = AnimationUtils.loadAnimation(this, R.anim.rotate_clock);
+        if (clockIcon != null) {
+            clockIcon.startAnimation(rotateAnimation);
+        }
+        // --- END ANIMATION CODE ---
+
         buttonBackToHome.setOnClickListener(v -> {
-            // Create an intent to go back to the main landing screen
             Intent intent = new Intent(PendingVerificationActivity.this, LandingActivity.class);
-            // These flags clear the activity history, so the user can't press 'back'
-            // and get into the sign-up flow again.
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
-            finish(); // Close this activity
+            finish();
         });
     }
 }

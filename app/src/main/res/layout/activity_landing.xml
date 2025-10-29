@@ -10,13 +10,11 @@
     android:padding="24dp"
     tools:context=".LandingActivity">
 
-    <!-- Spacer to push content down -->
     <Space
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- Icon and Titles -->
     <FrameLayout
         android:layout_width="112dp"
         android:layout_height="112dp"
@@ -48,68 +46,49 @@
         android:textColor="@color/text_secondary"
         android:textSize="16sp" />
 
-    <!-- Spacer -->
     <Space
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- Buttons Section -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonStudentLogin"
-        style="@style/Widget.MaterialComponents.Button"
+        style="@style/PrimaryButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:backgroundTint="@color/deep_purple"
-        android:paddingVertical="16dp"
         android:text="Login as Student"
-        android:textColor="@color/pure_white"
-        app:cornerRadius="24dp"
-        app:elevation="4dp"
         app:icon="@drawable/ic_arrow_forward"
-        app:iconGravity="textEnd"
-        app:iconTint="@color/pure_white" />
+        app:iconGravity="textEnd" /> <com.google.android.material.button.MaterialButton
+    android:id="@+id/buttonStudentSignUp"
+    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="12dp"
+    android:paddingVertical="16dp"
+    android:text="Sign Up as Student"
+    android:textColor="@color/deep_purple"
+    app:cornerRadius="24dp"
+    app:icon="@drawable/ic_arrow_forward"
+    app:iconGravity="textEnd"
+    app:iconTint="@color/deep_purple"
+    app:strokeColor="@color/deep_purple"
+    app:strokeWidth="1dp" /> <com.google.android.material.button.MaterialButton
+    android:id="@+id/buttonAdminLogin"
+    style="@style/PrimaryButton"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="12dp"
+    android:backgroundTint="@color/soft_lavender"
+    android:text="Login as Admin"
+    app:icon="@drawable/ic_arrow_forward"
+    app:iconGravity="textEnd" /> <TextView
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="24dp"
+    android:text="Only for verified TCU students"
+    android:textColor="@color/text_secondary"
+    android:textSize="12sp" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/buttonStudentSignUp"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:background="@drawable/bg_button_secondary"
-        android:paddingVertical="16dp"
-        android:text="Sign Up as Student"
-        android:textColor="@color/deep_purple"
-        app:icon="@drawable/ic_arrow_forward"
-        app:iconGravity="textEnd"
-        app:iconTint="@color/deep_purple"
-        app:strokeWidth="0dp" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/buttonAdminLogin"
-        style="@style/Widget.MaterialComponents.Button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:backgroundTint="#C9A4F8"
-        android:paddingVertical="16dp"
-        android:text="Login as Admin"
-        android:textColor="@color/pure_white"
-        app:cornerRadius="24dp"
-        app:elevation="2dp"
-        app:icon="@drawable/ic_arrow_forward"
-        app:iconGravity="textEnd"
-        app:iconTint="@color/pure_white" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="Only for verified TCU students"
-        android:textColor="@color/text_secondary"
-        android:textSize="12sp" />
-
-    <!-- Spacer -->
     <Space
         android:layout_width="match_parent"
         android:layout_height="0dp"

@@ -15,11 +15,12 @@
         android:layout_height="128dp"
         android:background="@drawable/bg_icon_pending_circle">
         <ImageView
-            android:layout_width="64dp"
+            android:id="@+id/clockIcon" android:layout_width="64dp"
             android:layout_height="64dp"
             android:layout_gravity="center"
             android:src="@drawable/ic_clock"
-            app:tint="#FF8F00" /> </FrameLayout>
+            app:tint="#FF8F00" />
+    </FrameLayout>
 
     <TextView
         android:layout_width="wrap_content"
@@ -46,6 +47,42 @@
         android:background="@drawable/bg_checklist_box"
         android:orientation="vertical"
         android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="What happens next?"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="An admin will review your submitted photos"
+            android:textColor="@color/text_secondary"
+            app:drawableStartCompat="@drawable/ic_check_circle"
+            app:drawableTint="#2E7D32"
+            android:drawablePadding="8dp" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="You'll receive an email notification when verified"
+            android:textColor="@color/text_secondary"
+            app:drawableStartCompat="@drawable/ic_check_circle"
+            app:drawableTint="#2E7D32"
+            android:drawablePadding="8dp"
+            android:layout_marginTop="8dp"/>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Once approved, you can login and start connecting"
+            android:textColor="@color/text_secondary"
+            app:drawableStartCompat="@drawable/ic_check_circle"
+            app:drawableTint="#2E7D32"
+            android:drawablePadding="8dp"
+            android:layout_marginTop="8dp"/>
     </LinearLayout>
 
     <Space

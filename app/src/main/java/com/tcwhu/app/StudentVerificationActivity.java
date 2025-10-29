@@ -11,7 +11,9 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class StudentVerificationActivity extends AppCompatActivity {
 
@@ -42,7 +44,7 @@ public class StudentVerificationActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        loadUnverifiedStudents(); // Load data every time the screen is shown
+        loadUnverifiedStudents();
     }
 
     private void setupRecyclerView() {
@@ -83,22 +85,43 @@ public class StudentVerificationActivity extends AppCompatActivity {
         db.collection("users").document(student.getUserId()).update("isVerified", true)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, student.getNickname() + " approved.", Toast.LENGTH_SHORT).show();
+                    // --- ACTIVITY LOGGING ---
+                    logAdminAction("Approved user: " + student.getNickname(), student.getUserId());
                     loadUnverifiedStudents(); // Refresh the list
                 });
     }
 
     private void rejectStudent(Student student) {
-        // A real app might move them to a 'rejected' collection instead of deleting.
-        // For now, deleting is fine.
         db.collection("users").document(student.getUserId()).delete()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, student.getNickname() + " rejected and removed.", Toast.LENGTH_SHORT).show();
+                    // --- ACTIVITY LOGGING ---
+                    logAdminAction("Rejected and removed user: " + student.getNickname(), student.getUserId());
                     loadUnverifiedStudents(); // Refresh the list
                 });
     }
 
+    // --- NEW METHOD TO SAVE LOGS TO FIRESTORE ---
+    private void logAdminAction(String action, String targetId) {
+        // In a real app, you would get the admin's actual ID/name
+        String adminId = "admin_user";
+
+        Map<String, Object> log = new HashMap<>();
+        log.put("adminId", adminId);
+        log.put("action", action);
+        log.put("targetId", targetId);
+        log.put("timestamp", System.currentTimeMillis());
+
+        // Save to the 'activity_logs' collection in Firestore
+        db.collection("activity_logs").add(log);
+    }
+
     private void checkIfEmpty() {
-        emptyView.setVisibility(studentList.isEmpty() ? View.VISIBLE : View.GONE);
-        recyclerView.setVisibility(studentList.isEmpty() ? View.GONE : View.VISIBLE);
+        if (emptyView != null) {
+            emptyView.setVisibility(studentList.isEmpty() ? View.VISIBLE : View.GONE);
+        }
+        if (recyclerView != null) {
+            recyclerView.setVisibility(studentList.isEmpty() ? View.GONE : View.VISIBLE);
+        }
     }
 }

@@ -1,20 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="deep_purple">#6A0DAD</color>
-    <color name="pure_white">#FFFFFF</color>
+    <color name="deep_purple_dark">#5A0B92</color>
+    <color name="soft_lavender">#C9A4F8</color>
+    <color name="maroon">#800000</color>  <color name="pure_white">#ffffff</color>
+    <color name="light_gray">#F5F5F5</color>
+    <color name="soft_black">#1a1a1a</color>
 
-    <color name="text_primary">#000000</color>
-    <color name="text_secondary">#666666</color>
-    <color name="text_on_primary">#FFFFFF</color>
+    <color name="warning_bg">#FEF3F2</color>
+    <color name="warning_text">#DC2626</color>
+    <color name="warning_border">#FEE4E2</color>
 
-    <color name="background">#FFFFFF</color>
-    <color name="surface">#F5F5F5</color>
-
-    <color name="purple_light">#9B4FD9</color>
-    <color name="purple_dark">#4A0873</color>
-
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-
-    <color name="maroon">#800000</color>
+    <color name="text_primary">@color/soft_black</color>
+    <color name="text_secondary">#6b7280</color>
+    <color name="text_on_primary">@color/pure_white</color>
+    <color name="background">@color/pure_white</color>
 </resources>
