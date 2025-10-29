@@ -8,6 +8,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.CenterCrop; // CRITICAL IMPORT
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners; // CRITICAL IMPORT
+import com.bumptech.glide.request.RequestOptions; // CRITICAL IMPORT
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -62,10 +65,20 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.EventViewH
             String formattedDate = formatter.format(new Date(event.getDate()));
             eventDateTextView.setText(formattedDate);
 
-            // Load the image using Glide
-            Glide.with(itemView.getContext())
-                    .load(event.getImageUrl())
-                    .into(eventImageView);
+            // --- CRITICAL FIX: Load image with CenterCrop and Rounding --- ✅
+            if (event.getImageUrl() != null && !event.getImageUrl().isEmpty()) {
+
+                // Define Glide options for scaling and corner radius (16dp to match the card view)
+                RequestOptions requestOptions = new RequestOptions().transform(
+                        new CenterCrop(),
+                        new RoundedCorners(16)
+                );
+
+                Glide.with(itemView.getContext())
+                        .load(event.getImageUrl())
+                        .apply(requestOptions)
+                        .into(eventImageView);
+            }
         }
     }
 }

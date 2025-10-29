@@ -18,15 +18,17 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class UserOverviewActivity extends AppCompatActivity implements UserOverviewAdapter.OnActionListener {
 
     private RecyclerView recyclerView;
     private UserOverviewAdapter adapter;
-    private List<Student> allStudentList; // Full list from Firestore
-    private List<Student> filteredStudentList; // List currently shown
+    private List<Student> allStudentList;
+    private List<Student> filteredStudentList;
     private FirebaseFirestore db;
     private TextView emptyView;
     private TextInputEditText inputSearch;
@@ -40,7 +42,10 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         setContentView(R.layout.activity_user_overview);
 
         db = FirebaseFirestore.getInstance();
+
+        // CRITICAL FIX: Changed ID from R.id.recyclerView to R.id.usersRecyclerView
         recyclerView = findViewById(R.id.usersRecyclerView);
+
         emptyView = findViewById(R.id.emptyView);
         inputSearch = findViewById(R.id.inputSearch);
         spinnerFilter = findViewById(R.id.spinnerFilter);
@@ -59,6 +64,12 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         loadAllStudents();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadAllStudents();
+    }
+
     private void setupRecyclerView() {
         adapter = new UserOverviewAdapter(filteredStudentList, this);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -73,7 +84,7 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         spinnerFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                currentFilter = parent.getItemAtPosition(position).toString().toLowerCase().split(" ")[0]; // Extracts "all", "verified", etc.
+                currentFilter = parent.getItemAtPosition(position).toString().toLowerCase().split(" ")[0];
                 applyFilters();
             }
 
@@ -111,19 +122,22 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
     }
 
     private void applyFilters() {
-        // Apply filtering and searching on the client side (since we fetched all users)
         filteredStudentList.clear();
 
         List<Student> searchResults = allStudentList.stream()
                 .filter(student ->
-                        student.getNickname().toLowerCase().contains(currentSearchQuery.toLowerCase()) ||
-                                student.getStudentNumber().toLowerCase().contains(currentSearchQuery.toLowerCase()))
+                        (student.getNickname() != null && student.getNickname().toLowerCase().contains(currentSearchQuery.toLowerCase())) ||
+                                (student.getStudentNumber() != null && student.getStudentNumber().toLowerCase().contains(currentSearchQuery.toLowerCase())))
                 .filter(student -> {
+                    boolean isVerified = student.isVerified();
+                    boolean isBanned = student.isBanned();
+                    boolean isSuspended = student.isSuspended();
+
                     switch (currentFilter) {
-                        case "verified": return student.isVerified() && !student.isBanned() && !student.isSuspended();
-                        case "pending": return !student.isVerified() && !student.isBanned() && !student.isSuspended();
-                        case "suspended": return student.isSuspended();
-                        case "banned": return student.isBanned();
+                        case "verified": return isVerified && !isBanned && !isSuspended;
+                        case "pending": return !isVerified && !isBanned && !isSuspended;
+                        case "suspended": return isSuspended;
+                        case "banned": return isBanned;
                         case "all":
                         default: return true;
                     }
@@ -137,27 +151,10 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
 
     // --- Action Listeners (Implement UserOverviewAdapter.OnActionListener) ---
 
-    @Override
-    public void onBan(String userId) {
-        showConfirmationDialog("Ban User", "Are you sure you want to permanently ban this user?", userId, "ban", "#B71C1C");
-    }
-
-    @Override
-    public void onUnsuspend(String userId) {
-        showConfirmationDialog("Unsuspend User", "Are you sure you want to lift the suspension for this user?", userId, "unsuspend", "#388E3C");
-    }
-
-    @Override
-    public void onUnban(String userId) {
-        showConfirmationDialog("Unban User", "Are you sure you want to unban this user and restore their access?", userId, "unban", "#388E3C");
-    }
-
-    @Override
-    public void onDelete(String userId) {
-        showConfirmationDialog("Delete Account", "WARNING: This action is permanent and removes the user from the database and authentication system.", userId, "delete", "#D32F2F");
-    }
-
-    // --- Database Action Execution ---
+    @Override public void onBan(String userId) { showConfirmationDialog("Ban User", "Are you sure you want to permanently ban this user?", userId, "ban", "#B71C1C"); }
+    @Override public void onUnsuspend(String userId) { showConfirmationDialog("Unsuspend User", "Are you sure you want to lift the suspension for this user?", userId, "unsuspend", "#388E3C"); }
+    @Override public void onUnban(String userId) { showConfirmationDialog("Unban User", "Are you sure you want to unban this user and restore their access?", userId, "unban", "#388E3C"); }
+    @Override public void onDelete(String userId) { showConfirmationDialog("Delete Account", "WARNING: This action is permanent and removes the user from the database and authentication system.", userId, "delete", "#D32F2F"); }
 
     private void showConfirmationDialog(String title, String message, String userId, String action, String colorHex) {
         new AlertDialog.Builder(this)
@@ -170,46 +167,43 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
 
     private void executeUserAction(String userId, String action) {
         if ("delete".equals(action)) {
-            // Deleting from Firestore is simple, but deleting from Auth requires a backend function (beyond mobile scope)
             db.collection("users").document(userId).delete()
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(this, "User deleted from Firestore.", Toast.LENGTH_LONG).show();
-                        loadAllStudents(); // Refresh the list
+                        loadAllStudents();
                     });
             return;
         }
 
-        // Map actions to Firestore updates
-        String field = "";
-        Boolean value = null;
+        Map<String, Object> updates = new HashMap<>();
 
         switch (action) {
             case "ban":
-                field = "isBanned";
-                value = true;
+                updates.put("isBanned", true);
+                updates.put("isSuspended", false);
+                updates.put("isVerified", true);
                 break;
             case "unsuspend":
-                field = "isSuspended";
-                value = false;
+                updates.put("isSuspended", false);
+                updates.put("isBanned", false);
                 break;
             case "unban":
-                field = "isBanned";
-                value = false;
+                updates.put("isBanned", false);
+                updates.put("isSuspended", false);
                 break;
             default:
                 return;
         }
 
-        db.collection("users").document(userId).update(field, value)
+        db.collection("users").document(userId).update(updates)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "User status updated to " + action.toUpperCase() + ".", Toast.LENGTH_SHORT).show();
-                    loadAllStudents(); // Refresh the list
+                    loadAllStudents();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Failed to update user status.", Toast.LENGTH_SHORT).show();
                 });
     }
-
 
     private void checkIfEmpty() {
         emptyView.setVisibility(filteredStudentList.isEmpty() ? View.VISIBLE : View.GONE);

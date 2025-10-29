@@ -9,6 +9,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -31,12 +34,28 @@ public class StudentProfileFragment extends Fragment {
     private FirebaseUser currentUser;
     private Student currentStudentProfile;
 
+    // --- CRITICAL FIX: Launcher for Avatar Selection ---
+    private ActivityResultLauncher<Intent> avatarSelectorLauncher;
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
         currentUser = mAuth.getCurrentUser();
+
+        // Initialize the launcher
+        avatarSelectorLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == AppCompatActivity.RESULT_OK && result.getData() != null) {
+                        String newAvatar = result.getData().getStringExtra("selectedAvatar");
+                        if (newAvatar != null) {
+                            updateAvatarInDatabase(newAvatar);
+                        }
+                    }
+                }
+        );
     }
 
     @Nullable
@@ -60,13 +79,43 @@ public class StudentProfileFragment extends Fragment {
 
         buttonLogout.setOnClickListener(v -> logoutUser());
         buttonDeleteAccount.setOnClickListener(v -> showDeleteConfirmationDialog());
-        buttonChangeAvatar.setOnClickListener(v -> Toast.makeText(getContext(), "Change Avatar clicked (WIP)", Toast.LENGTH_SHORT).show());
 
-        buttonEditNickname.setOnClickListener(v -> showEditFieldDialog("nickname", currentStudentProfile.getNickname()));
-        buttonEditInterests.setOnClickListener(v -> showEditFieldDialog("interests", currentStudentProfile.getInterests()));
+        // Link Avatar Button to Launcher
+        buttonChangeAvatar.setOnClickListener(v -> launchAvatarSelector());
+
+        // Setup click listeners for edit dialogs
+        buttonEditNickname.setOnClickListener(v -> {
+            if (currentStudentProfile != null) showEditFieldDialog("nickname", currentStudentProfile.getNickname());
+        });
+        buttonEditInterests.setOnClickListener(v -> {
+            if (currentStudentProfile != null) showEditFieldDialog("interests", currentStudentProfile.getInterests());
+        });
         buttonChangePassword.setOnClickListener(v -> showChangePasswordDialog());
 
         return view;
+    }
+
+    private void launchAvatarSelector() {
+        if (getActivity() == null) return;
+        Intent intent = new Intent(getActivity(), AvatarSelectorActivity.class);
+        intent.putExtra("userId", currentUser.getUid());
+        avatarSelectorLauncher.launch(intent);
+    }
+
+    private void updateAvatarInDatabase(String newAvatar) {
+        if (currentUser == null) return;
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("avatar", newAvatar);
+
+        db.collection("users").document(currentUser.getUid()).update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(getContext(), "Avatar updated successfully!", Toast.LENGTH_SHORT).show();
+                    loadUserProfile(); // Refresh UI to show new avatar
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(getContext(), "Failed to update avatar.", Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void loadUserProfile() {
@@ -93,7 +142,7 @@ public class StudentProfileFragment extends Fragment {
     // --- Dialogs and Update Logic ---
 
     private void showEditFieldDialog(String fieldName, String currentValue) {
-        if (getContext() == null) return;
+        if (getContext() == null || currentStudentProfile == null) return;
 
         final String fieldKey = fieldName;
 
@@ -135,6 +184,7 @@ public class StudentProfileFragment extends Fragment {
     private void showChangePasswordDialog() {
         if (getContext() == null || currentUser == null) return;
 
+        // NOTE: dialog_change_password.xml must exist for this to work
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_change_password, null);
         EditText inputCurrentPassword = dialogView.findViewById(R.id.inputCurrentPassword);
         EditText inputNewPassword = dialogView.findViewById(R.id.inputNewPassword);
@@ -164,7 +214,7 @@ public class StudentProfileFragment extends Fragment {
     }
 
     private void reauthenticateAndChangePassword(String currentPassword, String newPassword) {
-        String email = currentUser.getEmail(); // The dummy email (e.g., studentnumber@tcwhu.app)
+        String email = currentUser.getEmail();
         if (email == null) {
             Toast.makeText(getContext(), "Cannot change password. User email not found.", Toast.LENGTH_LONG).show();
             return;
@@ -193,7 +243,6 @@ public class StudentProfileFragment extends Fragment {
                 .setTitle("Request Account Deletion")
                 .setMessage("Are you sure you want to request account deletion? This action is permanent and will be reviewed by an admin.")
                 .setPositiveButton("Request Deletion", (dialog, which) -> {
-                    // In a real app, this would update a 'deletionRequested' field in Firestore
                     Toast.makeText(getContext(), "Deletion request sent to admin.", Toast.LENGTH_LONG).show();
                     logoutUser();
                 })

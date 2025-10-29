@@ -12,5 +12,5 @@ public class Chat {
 
     public String getLastMessage() { return lastMessage; }
     public long getTimestamp() { return timestamp; }
-    public List<String> getUsers() { return users; } // Correct getter name
+    public List<String> getUsers() { return users; } // Correct getter
 }

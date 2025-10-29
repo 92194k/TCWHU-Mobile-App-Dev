@@ -137,7 +137,7 @@ public class ChatWindowActivity extends AppCompatActivity {
         Map<String, Object> chatOverview = new HashMap<>();
         chatOverview.put("lastMessage", lastMessage);
         chatOverview.put("timestamp", System.currentTimeMillis());
-        chatOverview.put("users", Arrays.asList(currentUserId, otherUserId)); // CORRECTED to "users"
+        chatOverview.put("users", Arrays.asList(currentUserId, otherUserId)); // CORRECTED field name
 
         db.collection("chats").document(chatId).set(chatOverview);
     }

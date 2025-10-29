@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/deep_purple</item>
+
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+
         <item name="android:windowFullscreen">true</item>
 
+        <item name="android:statusBarColor">@color/deep_purple</item>
+        <item name="android:windowBackground">@color/pure_white</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
     </style>
 </resources>

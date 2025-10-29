@@ -2,7 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
+        android:name=".TCWHUApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -11,30 +14,63 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
+        <activity
+            android:name=".ViewPhotoActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PhotoUploadActivity"
+            android:exported="false" />
         <activity
             android:name=".ChatWindowActivity"
             android:exported="false" />
-
-        <activity android:name=".AdminSettingsActivity" android:exported="false" />
-        <activity android:name=".ActivityLogsActivity" android:exported="false" />
-        <activity android:name=".UserOverviewActivity" android:exported="false" />
-        <activity android:name=".ReportsManagementActivity" android:exported="false" />
-        <activity android:name=".EventsManagementActivity" android:exported="false" />
-        <activity android:name=".StudentVerificationActivity" android:exported="false" />
-        <activity android:name=".AdminDashboardActivity" android:exported="false" />
-        <activity android:name=".AdminLoginActivity" android:exported="false" />
-        <activity android:name=".StudentHomeActivity" android:exported="false" />
-        <activity android:name=".PendingVerificationActivity" android:exported="false" />
-        <activity android:name=".AvatarSelectorActivity" android:exported="false" />
-        <activity android:name=".StudentSignUpActivity" android:exported="false" />
-        <activity android:name=".StudentLoginActivity" android:exported="false" />
-        <activity android:name=".LandingActivity" android:exported="false" />
+        <activity
+            android:name=".AdminSettingsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ActivityLogsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".UserOverviewActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ReportsManagementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".EventsManagementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".StudentVerificationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AdminDashboardActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AdminLoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".StudentHomeActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PendingVerificationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AvatarSelectorActivity"
+            android:exported="false" />
+        <activity
+            android:name=".StudentSignUpActivity"
+            android:exported="false" />
+        <activity
+            android:name=".StudentLoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".LandingActivity"
+            android:exported="false" />
         <activity
             android:name=".SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

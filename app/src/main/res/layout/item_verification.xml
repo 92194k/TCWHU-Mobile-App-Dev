@@ -5,106 +5,118 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="16dp"
-    app:cardCornerRadius="24dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="16dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:drawablePadding="8dp"
             android:text="Student Information"
             android:textColor="@color/text_primary"
             android:textSize="18sp"
             android:textStyle="bold"
             app:drawableStartCompat="@drawable/ic_profile"
-            app:drawableTint="@color/deep_purple" />
+            app:drawableTint="@color/deep_purple"
+            android:drawablePadding="8dp" />
+
+        <TextView android:id="@+id/textStudentNumber" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textSize="14sp" tools:text="Student Number: 2023-00001"/>
+        <TextView android:id="@+id/textNickname" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="14sp" tools:text="Nickname: BlueDragon"/>
 
         <TextView
-            android:id="@+id/textStudentNumber"
-            style="@style/TextAppearance.MaterialComponents.Body1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            tools:text="Student Number: 2023-00001" />
-
-        <TextView
-            android:id="@+id/textNickname"
-            style="@style/TextAppearance.MaterialComponents.Body1"
+            android:id="@+id/textEmail"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            tools:text="Nickname: BlueDragon" />
+            android:textSize="14sp"
+            tools:text="Email: student@email.com"/>
+
+        <TextView android:id="@+id/textYearLevel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="14sp" tools:text="Year Level: 1st Year"/>
 
         <TextView
-            android:id="@+id/textYearLevel"
-            style="@style/TextAppearance.MaterialComponents.Body1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            tools:text="Year Level: 1st Year" />
-
-        <TextView
-            android:id="@+id/textInterests"
-            style="@style/TextAppearance.MaterialComponents.Body1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            tools:text="Interests: Gaming, Art" />
-
-        <FrameLayout
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/bg_avatar_preview_circle">
-
-            <TextView
-                android:id="@+id/textAvatar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:textSize="36sp"
-                tools:text="😀" />
-        </FrameLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
             android:layout_marginTop="16dp"
-            android:background="#eee" />
+            android:text="Verification Photos"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/buttonReject"
-                style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Reject"
-                android:textColor="#B71C1C"
-                app:icon="@drawable/ic_reject"
-                app:iconTint="#B71C1C" />
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Student Selfie"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginBottom="4dp"/>
+                <ImageView
+                    android:id="@+id/selfiePhotoPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:scaleType="centerCrop"
+                    android:background="#e0e0e0"
+                    android:contentDescription="Selfie Photo"/>
+            </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/buttonApprove"
-                style="@style/Widget.MaterialComponents.Button.Icon"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:backgroundTint="#2E7D32"
-                android:text="Approve"
-                app:icon="@drawable/ic_check_circle" />
-        </LinearLayout>
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Student ID Card"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginBottom="4dp"/>
+                <ImageView
+                    android:id="@+id/idPhotoPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:scaleType="centerCrop"
+                    android:background="#e0e0e0"
+                    android:contentDescription="ID Card Photo"/>
+            </LinearLayout>
+        </LinearLayout> <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonReject"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Reject"
+            android:textColor="#D32F2F"
+            app:strokeColor="#D32F2F" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonApprove"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="Approve" />
+    </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

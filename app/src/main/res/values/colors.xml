@@ -3,16 +3,15 @@
     <color name="deep_purple">#6A0DAD</color>
     <color name="deep_purple_dark">#5A0B92</color>
     <color name="soft_lavender">#C9A4F8</color>
-    <color name="maroon">#800000</color>  <color name="pure_white">#ffffff</color>
+    <color name="pure_white">#FFFFFF</color>
     <color name="light_gray">#F5F5F5</color>
     <color name="soft_black">#1a1a1a</color>
-
-    <color name="warning_bg">#FEF3F2</color>
+    <color name="inactive_gray">#9CA3AF</color>
+    <color name="maroon">#800000</color> <color name="warning_bg">#FEF3F2</color>
     <color name="warning_text">#DC2626</color>
     <color name="warning_border">#FEE4E2</color>
 
     <color name="text_primary">@color/soft_black</color>
-    <color name="text_secondary">#6b7280</color>
+    <color name="text_secondary">@color/inactive_gray</color>
     <color name="text_on_primary">@color/pure_white</color>
-    <color name="background">@color/pure_white</color>
 </resources>

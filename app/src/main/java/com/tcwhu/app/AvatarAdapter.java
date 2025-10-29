@@ -23,6 +23,12 @@ public class AvatarAdapter extends RecyclerView.Adapter<AvatarAdapter.AvatarView
         this.listener = listener;
     }
 
+    // --- THIS IS THE MISSING METHOD --- ✅
+    // This allows other classes to safely get the current list of avatars.
+    public List<String> getAvatarList() {
+        return avatarList;
+    }
+
     @NonNull
     @Override
     public AvatarViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -33,12 +39,13 @@ public class AvatarAdapter extends RecyclerView.Adapter<AvatarAdapter.AvatarView
     @Override
     public void onBindViewHolder(@NonNull AvatarViewHolder holder, int position) {
         String avatar = avatarList.get(position);
-        holder.bind(avatar, listener);
+        holder.bind(avatar);
 
         if (position == selectedPosition) {
             holder.itemView.setBackgroundResource(R.drawable.bg_avatar_grid_item_selected);
         } else {
-            holder.itemView.setBackgroundResource(android.R.color.transparent);
+            // It's better to use a drawable for the unselected state for consistency
+            holder.itemView.setBackgroundResource(R.drawable.bg_avatar_grid_item_unselected);
         }
     }
 
@@ -54,15 +61,13 @@ public class AvatarAdapter extends RecyclerView.Adapter<AvatarAdapter.AvatarView
         notifyItemChanged(selectedPosition);
     }
 
-    // --- THIS IS THE NEW HELPER METHOD --- ✅
-    // This method allows the Activity to safely update the list of avatars.
     public void updateAvatars(List<String> newAvatars) {
         this.avatarList.clear();
         this.avatarList.addAll(newAvatars);
         notifyDataSetChanged();
     }
 
-    static class AvatarViewHolder extends RecyclerView.ViewHolder {
+    class AvatarViewHolder extends RecyclerView.ViewHolder {
         TextView avatarTextView;
 
         public AvatarViewHolder(@NonNull View itemView) {
@@ -70,10 +75,12 @@ public class AvatarAdapter extends RecyclerView.Adapter<AvatarAdapter.AvatarView
             avatarTextView = itemView.findViewById(R.id.avatarTextView);
         }
 
-        public void bind(final String avatar, final OnAvatarListener listener) {
+        public void bind(final String avatar) {
             avatarTextView.setText(avatar);
             itemView.setOnClickListener(v -> {
-                listener.onAvatarClick(avatar);
+                if (listener != null) {
+                    listener.onAvatarClick(avatar);
+                }
             });
         }
     }

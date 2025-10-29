@@ -43,7 +43,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         Chat chat = chatList.get(position);
 
         // Safety check to prevent crashes from broken data in Firestore.
-        if (chat.getUsers() == null || chat.getUsers().isEmpty()) { // CORRECTED to getUsers()
+        if (chat.getUsers() == null || chat.getUsers().isEmpty()) { // Uses getUsers()
             holder.itemView.setVisibility(View.GONE);
             holder.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
             return;
@@ -52,8 +52,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         holder.itemView.setVisibility(View.VISIBLE);
         holder.itemView.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // Find the ID of the person we are chatting with
-        String otherUserId = chat.getUsers().stream() // CORRECTED to getUsers()
+        String otherUserId = chat.getUsers().stream() // Uses getUsers()
                 .filter(id -> !id.equals(currentUserId))
                 .findFirst().orElse(null);
 
@@ -79,8 +78,8 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
 
         public void bind(final Student otherUser, final Chat chat, final OnChatSelectedListener listener, final String otherUserId) {
             if (otherUser != null) {
-                textNickname.setText(otherUser.getNickname());
-                textAvatar.setText(otherUser.getAvatar());
+                textNickname.setText(otherUser.getNickname() != null ? otherUser.getNickname() : "Unknown User");
+                textAvatar.setText(otherUser.getAvatar() != null ? otherUser.getAvatar() : "?");
 
                 SimpleDateFormat formatter = new SimpleDateFormat("h:mm a", Locale.US);
                 textTime.setText(formatter.format(new Date(chat.getTimestamp())));
@@ -89,8 +88,9 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
 
                 itemView.setOnClickListener(v -> listener.onChatSelected(otherUserId));
             } else {
-                textNickname.setText("Archived User");
+                textNickname.setText("User Not Found");
                 textAvatar.setText("?");
+                textLastMessage.setText(chat.getLastMessage());
                 itemView.setOnClickListener(null);
             }
         }

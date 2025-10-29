@@ -45,22 +45,21 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
 
     @Nullable @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_chat, container, false);
+        View view = inflater.inflate(R.layout.fragment_chat, container, false);
+        return view;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // --- ALL INITIALIZATION MOVED HERE --- ✅
-        // Guarantees all views are found before being used.
         recyclerView = view.findViewById(R.id.recyclerView);
         emptyView = view.findViewById(R.id.emptyView);
 
         chatList = new ArrayList<>();
         studentMap = new HashMap<>();
 
-        setupRecyclerView(); // Now called after all setup is complete.
+        setupRecyclerView();
     }
 
     @Override
@@ -103,9 +102,9 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
 
         CollectionReference chatsRef = db.collection("chats");
 
+        // CRITICAL FIX: Query the correct field name
         chatListListener = chatsRef
                 .whereArrayContains("users", currentUserId)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null) {
                         Toast.makeText(getContext(), "Error loading chats.", Toast.LENGTH_SHORT).show();
