@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
@@ -33,6 +34,7 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
     private String currentUserId;
     private ListenerRegistration chatListListener;
     private LinearLayout emptyView;
+    private List<String> blockedUsersList = new ArrayList<>(); // <-- ADDED
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -52,20 +54,17 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
         recyclerView = view.findViewById(R.id.recyclerView);
         emptyView = view.findViewById(R.id.emptyView);
-
         chatList = new ArrayList<>();
         studentMap = new HashMap<>();
-
         setupRecyclerView();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        loadAllUsersAndListenForChats();
+        loadCurrentUserProfile(); // <-- CHANGED: Load block list first
     }
 
     @Override
@@ -82,6 +81,24 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
         recyclerView.setAdapter(adapter);
     }
 
+    // --- ADDED: Load current user's block list ---
+    private void loadCurrentUserProfile() {
+        if (currentUserId == null) return;
+        db.collection("users").document(currentUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Student currentUser = documentSnapshot.toObject(Student.class);
+                        if (currentUser != null && currentUser.getBlockedUsers() != null) {
+                            blockedUsersList = currentUser.getBlockedUsers();
+                        }
+                    }
+                    loadAllUsersAndListenForChats();
+                })
+                .addOnFailureListener(e -> {
+                    loadAllUsersAndListenForChats();
+                });
+    }
+
     private void loadAllUsersAndListenForChats() {
         if (currentUserId == null) return;
 
@@ -94,7 +111,7 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                     }
                     listenForChats();
                 })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Failed to load user data for chat.", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> Toast.makeText(getContext(), "Failed to load user data.", Toast.LENGTH_SHORT).show());
     }
 
     private void listenForChats() {
@@ -102,29 +119,38 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
 
         CollectionReference chatsRef = db.collection("chats");
 
-        // CRITICAL FIX: Query the correct field name
+        if (chatListListener != null) chatListListener.remove();
+
         chatListListener = chatsRef
                 .whereArrayContains("users", currentUserId)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshots, e) -> {
-                    if (e != null) {
-                        Toast.makeText(getContext(), "Error loading chats.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    if (snapshots != null) {
-                        chatList.clear();
-                        for (QueryDocumentSnapshot doc : snapshots) {
-                            Chat chat = doc.toObject(Chat.class);
+                    if (e != null || snapshots == null) return;
+
+                    chatList.clear();
+                    for (QueryDocumentSnapshot doc : snapshots) {
+                        Chat chat = doc.toObject(Chat.class);
+
+                        // --- CRITICAL FIX: Hide chats from blocked users ---
+                        String otherUserId = null;
+                        for(String id : chat.getUsers()) {
+                            if (!id.equals(currentUserId)) {
+                                otherUserId = id;
+                                break;
+                            }
+                        }
+
+                        if (otherUserId != null && !blockedUsersList.contains(otherUserId)) {
                             chatList.add(chat);
                         }
-                        adapter.notifyDataSetChanged();
-                        checkIfEmpty();
                     }
+                    adapter.notifyDataSetChanged();
+                    checkIfEmpty();
                 });
     }
 
     private void checkIfEmpty() {
         if (recyclerView == null || emptyView == null) return;
-
         if (chatList.isEmpty()) {
             recyclerView.setVisibility(View.GONE);
             emptyView.setVisibility(View.VISIBLE);
@@ -137,7 +163,6 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
     @Override
     public void onChatSelected(String otherUserId) {
         if (getActivity() == null) return;
-
         Intent intent = new Intent(getActivity(), ChatWindowActivity.class);
         intent.putExtra(ChatWindowActivity.EXTRA_OTHER_USER_ID, otherUserId);
         startActivity(intent);

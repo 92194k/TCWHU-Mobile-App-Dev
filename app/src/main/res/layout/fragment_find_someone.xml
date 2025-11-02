@@ -15,6 +15,7 @@
         android:elevation="4dp"
         android:orientation="vertical"
         android:padding="16dp">
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -22,6 +23,7 @@
             android:textColor="@color/pure_white"
             android:textSize="20sp"
             android:textStyle="bold" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -39,18 +41,20 @@
         android:padding="16dp">
 
         <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:boxBackgroundMode="none"
+            app:boxCornerRadiusBottomEnd="16dp"
+            app:boxCornerRadiusBottomStart="16dp"
+            app:boxCornerRadiusTopEnd="16dp"
+            app:boxCornerRadiusTopStart="16dp"
             app:hintEnabled="false">
+
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/inputSearch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_search_input"
                 android:hint="Search by nickname or interests..."
-                android:paddingStart="48dp"
-                android:paddingVertical="12dp"
                 android:drawableStart="@drawable/ic_search"
                 android:drawablePadding="12dp"
                 android:drawableTint="@color/text_secondary"
@@ -62,11 +66,15 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:scrollbars="none">
-            <LinearLayout
+
+            <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chipContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal" />
+                app:singleLine="true"
+                app:singleSelection="true">
+            </com.google.android.material.chip.ChipGroup>
+
         </HorizontalScrollView>
     </LinearLayout>
 
@@ -78,45 +86,31 @@
         android:background="@drawable/bg_alert_box"
         android:orientation="horizontal"
         android:padding="12dp">
-
-        <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginEnd="8dp"
-            android:src="@drawable/ic_alert_error"
-            app:tint="#DC2626" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Safety Reminder: Never share personal information with anyone."
-            android:textColor="#DC2626"
-            android:textSize="12sp" />
     </LinearLayout>
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:layout_marginTop="8dp">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:padding="16dp"
-            tools:listitem="@layout/item_student_finder" />
+            android:clipToPadding="false" />
 
         <TextView
             android:id="@+id/emptyView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:drawablePadding="8dp"
-            android:gravity="center"
             android:text="No students found."
             android:textColor="@color/text_secondary"
             android:visibility="gone"
+            android:gravity="center"
+            android:textSize="16sp"
             app:drawableTopCompat="@drawable/ic_find"
             app:drawableTint="@color/deep_purple" />
     </RelativeLayout>
+
 </LinearLayout>

@@ -1,5 +1,6 @@
 package com.tcwhu.app;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -18,11 +19,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ActivityLogsActivity extends AppCompatActivity {
+public class ActivityLogsActivity extends AppCompatActivity implements ActivityLogsAdapter.OnItemClickListener {
 
     private RecyclerView recyclerView;
     private ActivityLogsAdapter adapter;
@@ -30,13 +30,12 @@ public class ActivityLogsActivity extends AppCompatActivity {
     private List<ActivityLog> filteredLogList;
     private FirebaseFirestore db;
     private TextView emptyView;
+
+    // --- ADDED: Views for filtering ---
     private TextInputEditText inputSearch;
     private Spinner spinnerFilter;
-    private String currentFilterType = "all";
+    private String currentFilter = "all";
     private String currentSearchQuery = "";
-
-    // Temporary data model for the spinner filter options
-    private static final String[] FILTER_OPTIONS = new String[]{"All Actions", "Approvals", "Bans & Suspensions", "Event Changes"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,8 +45,8 @@ public class ActivityLogsActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         recyclerView = findViewById(R.id.logsRecyclerView);
         emptyView = findViewById(R.id.emptyView);
-        inputSearch = findViewById(R.id.inputSearch);
-        spinnerFilter = findViewById(R.id.spinnerFilter);
+        inputSearch = findViewById(R.id.inputSearch); // Find new view
+        spinnerFilter = findViewById(R.id.spinnerFilter); // Find new view
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -64,19 +63,21 @@ public class ActivityLogsActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        adapter = new ActivityLogsAdapter(filteredLogList);
+        adapter = new ActivityLogsAdapter(filteredLogList, this); // Adapter now uses the filtered list
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
     }
 
+    // --- NEW: Set up the filter dropdown ---
     private void setupFilterSpinner() {
-        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, FILTER_OPTIONS);
+        String[] filters = new String[]{"All Logs", "Approvals", "Rejections", "Bans", "Updates"};
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, filters);
         spinnerFilter.setAdapter(spinnerAdapter);
 
         spinnerFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                currentFilterType = parent.getItemAtPosition(position).toString().toLowerCase().split(" ")[0]; // e.g., "all", "approvals"
+                currentFilter = parent.getItemAtPosition(position).toString().toLowerCase();
                 applyFilters();
             }
             @Override
@@ -84,11 +85,12 @@ public class ActivityLogsActivity extends AppCompatActivity {
         });
     }
 
+    // --- NEW: Set up the search bar listener ---
     private void setupSearchListener() {
         inputSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                currentSearchQuery = s.toString();
+                currentSearchQuery = s.toString().toLowerCase();
                 applyFilters();
             }
             @Override public void afterTextChanged(Editable s) {}
@@ -96,11 +98,9 @@ public class ActivityLogsActivity extends AppCompatActivity {
     }
 
     private void loadActivityLogs() {
-        // NOTE: Logging is not automatically done by Firestore/Auth.
-        // In a real app, admins would create a separate log entry for every action.
-        // For now, we fetch from a fictional 'activity_logs' collection.
-
-        db.collection("activity_logs").orderBy("timestamp", Query.Direction.DESCENDING).limit(100).get()
+        db.collection("activity_logs")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         allLogList.clear();
@@ -109,29 +109,36 @@ public class ActivityLogsActivity extends AppCompatActivity {
                             log.setId(document.getId());
                             allLogList.add(log);
                         }
-                        applyFilters();
+                        applyFilters(); // Apply default filters
                     } else {
-                        Toast.makeText(this, "Error loading logs. Create 'activity_logs' collection in Firestore.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Error loading logs.", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
 
+    // --- NEW: Filtering Logic ---
     private void applyFilters() {
         filteredLogList.clear();
 
         List<ActivityLog> searchResults = allLogList.stream()
-                .filter(log -> log.getAction().toLowerCase().contains(currentSearchQuery.toLowerCase()))
                 .filter(log -> {
-                    String action = log.getAction().toLowerCase();
-                    switch (currentFilterType) {
-                        case "all":
-                            return true;
+                    // Search filter (checks action and admin ID)
+                    boolean matchesSearch = (log.getAction() != null && log.getAction().toLowerCase().contains(currentSearchQuery)) ||
+                            (log.getAdminId() != null && log.getAdminId().toLowerCase().contains(currentSearchQuery));
+
+                    if (!matchesSearch) return false;
+
+                    // Category filter
+                    switch (currentFilter) {
                         case "approvals":
-                            return action.contains("approv") || action.contains("verified") || action.contains("unban") || action.contains("unsuspend");
+                            return log.getAction().toLowerCase().contains("approve");
+                        case "rejections":
+                            return log.getAction().toLowerCase().contains("reject");
                         case "bans":
-                            return action.contains("ban") || action.contains("suspend");
-                        case "event":
-                            return action.contains("event");
+                            return log.getAction().toLowerCase().contains("ban");
+                        case "updates":
+                            return log.getAction().toLowerCase().contains("update");
+                        case "all logs":
                         default:
                             return true;
                     }
@@ -146,5 +153,12 @@ public class ActivityLogsActivity extends AppCompatActivity {
     private void checkIfEmpty() {
         emptyView.setVisibility(filteredLogList.isEmpty() ? View.VISIBLE : View.GONE);
         recyclerView.setVisibility(filteredLogList.isEmpty() ? View.GONE : View.VISIBLE);
+    }
+
+    @Override
+    public void onItemClick(ActivityLog log) {
+        Intent intent = new Intent(this, ActivityLogDetailActivity.class);
+        intent.putExtra(ActivityLogDetailActivity.EXTRA_LOG, log);
+        startActivity(intent);
     }
 }

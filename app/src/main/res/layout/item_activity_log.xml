@@ -6,7 +6,10 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="8dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="1dp">
+    app:cardElevation="2dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,16 +17,17 @@
         android:orientation="horizontal"
         android:padding="16dp"
         android:gravity="center_vertical"
-        android:background="#f9f9f9">
+        android:background="@color/pure_white">
 
-        <!-- Icon/Emoji Placeholder -->
         <TextView
             android:id="@+id/textLogIcon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:gravity="center"
             android:textSize="24sp"
-            tools:text="✅" />
+            android:layout_marginEnd="12dp"
+            android:textColor="@color/deep_purple"
+            tools:text="🛡️" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -31,22 +35,20 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <!-- Action Description -->
             <TextView
                 android:id="@+id/textAction"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp"
+                android:textSize="15sp"
                 android:textStyle="bold"
-                tools:text="Approved new user: BlueDragon" />
+                tools:text="Approved user: BlueDragon (2024-12345)" />
 
-            <!-- Details (Admin ID and Timestamp) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:layout_marginTop="2dp">
 
                 <TextView
                     android:id="@+id/textAdminId"
@@ -54,37 +56,28 @@
                     android:layout_height="wrap_content"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    app:drawableStartCompat="@drawable/ic_profile"
-                    app:drawableTint="@color/deep_purple"
-                    android:drawablePadding="4dp"
-                    tools:text="Admin: admin_staff_123" />
+                    tools:text="Admin ID: staff001" />
 
                 <TextView
                     android:id="@+id/textTimestamp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
+                    android:layout_marginStart="8dp"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
-                    app:drawableStartCompat="@drawable/ic_clock"
-                    app:drawableTint="@color/deep_purple"
-                    android:drawablePadding="4dp"
-                    tools:text="Oct 24, 2025, 8:00 PM" />
+                    tools:text="— Oct 30, 4:45 PM" />
             </LinearLayout>
 
-            <!-- Target ID (if applicable) -->
             <TextView
                 android:id="@+id/textTargetId"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textColor="@color/text_secondary"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 android:visibility="gone"
-                tools:text="Target ID: user_id_xyz123"
-                tools:visibility="visible"/>
+                tools:text="Target: user_abc123"
+                tools:visibility="visible" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

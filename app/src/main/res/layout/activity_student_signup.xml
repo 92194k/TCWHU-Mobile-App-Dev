@@ -15,7 +15,7 @@
         android:background="@color/deep_purple"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:navigationIconTint="@color/pure_white"
-        app:title="Create Account"
+        app:title="@string/create_account"
         app:titleTextColor="@color/pure_white" />
 
     <ScrollView
@@ -28,6 +28,7 @@
             android:orientation="vertical"
             android:padding="24dp">
 
+            <!-- Privacy warning box -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -35,27 +36,31 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="16dp">
+
                 <ImageView
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:layout_marginEnd="8dp"
                     android:src="@drawable/ic_alert_error"
                     app:tint="@color/warning_text"
-                    android:contentDescription="Warning Icon"/>
+                    android:contentDescription="@string/icon_description_warning"/>
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Privacy &amp; Safety First: Do not share your real name, course, phone number, or personal information."
+                    android:text="@string/signup_privacy_warning"
                     android:textColor="@color/warning_text"
                     android:textSize="14sp" />
             </LinearLayout>
 
+            <!-- Student number -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:hint="Student Number">
+                android:hint="@string/student_number">
+
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/inputStudentNumber"
                     android:layout_width="match_parent"
@@ -63,19 +68,22 @@
                     android:inputType="text"
                     android:minHeight="48dp" />
             </com.google.android.material.textfield.TextInputLayout>
+
             <TextView
                 style="@style/TextAppearance.MaterialComponents.Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Format: YYYY-XXXXX (For verification only)" />
+                android:text="@string/signup_student_number_guide" />
 
+            <!-- Email -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="Email Address">
+
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/inputEmail"
                     android:layout_width="match_parent"
@@ -83,6 +91,7 @@
                     android:inputType="textEmailAddress"
                     android:minHeight="48dp" />
             </com.google.android.material.textfield.TextInputLayout>
+
             <TextView
                 style="@style/TextAppearance.MaterialComponents.Caption"
                 android:layout_width="wrap_content"
@@ -90,6 +99,7 @@
                 android:layout_marginTop="4dp"
                 android:text="For verification process only" />
 
+            <!-- Password -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
@@ -97,6 +107,7 @@
                 android:layout_marginTop="16dp"
                 android:hint="@string/create_password"
                 app:passwordToggleEnabled="true">
+
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/inputPassword"
                     android:layout_width="match_parent"
@@ -104,6 +115,7 @@
                     android:inputType="textPassword"
                     android:minHeight="48dp" />
             </com.google.android.material.textfield.TextInputLayout>
+
             <TextView
                 style="@style/TextAppearance.MaterialComponents.Caption"
                 android:layout_width="wrap_content"
@@ -111,6 +123,7 @@
                 android:layout_marginTop="4dp"
                 android:text="@string/signup_password_guide" />
 
+            <!-- Confirm password -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
@@ -118,6 +131,7 @@
                 android:layout_marginTop="16dp"
                 android:hint="@string/confirm_password"
                 app:passwordToggleEnabled="true">
+
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/inputConfirmPassword"
                     android:layout_width="match_parent"
@@ -125,18 +139,21 @@
                     android:inputType="textPassword"/>
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Nickname -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="@string/nickname_display_name">
+
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/inputNickname"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
+
             <TextView
                 style="@style/TextAppearance.MaterialComponents.Caption"
                 android:layout_width="wrap_content"
@@ -145,18 +162,21 @@
                 android:text="@string/signup_nickname_warning"
                 android:textColor="@color/warning_text" />
 
+            <!-- Year Level -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="@string/year_level">
+
                 <AutoCompleteTextView
                     android:id="@+id/inputYearLevel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="none"/>
             </com.google.android.material.textfield.TextInputLayout>
+
             <TextView
                 style="@style/TextAppearance.MaterialComponents.Caption"
                 android:layout_width="wrap_content"
@@ -164,18 +184,21 @@
                 android:layout_marginTop="4dp"
                 android:text="@string/signup_year_level_guide" />
 
+            <!-- Interests -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="@string/interests_comma_separated">
+
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/inputInterests"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
+
             <TextView
                 style="@style/TextAppearance.MaterialComponents.Caption"
                 android:layout_width="wrap_content"
@@ -183,6 +206,7 @@
                 android:layout_marginTop="4dp"
                 android:text="@string/signup_interests_guide" />
 
+            <!-- Privacy agreement -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -193,14 +217,40 @@
                 android:textColor="@color/text_primary"
                 android:textSize="14sp" />
 
-            <com.google.android.material.checkbox.MaterialCheckBox
-                android:id="@+id/checkboxPrivacy"
+            <!-- Continue Button -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="@string/privacy_agreement_checkbox"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/checkboxPrivacy"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp" />
+
+                <TextView
+                    android:id="@+id/textPrivacyPolicyLink"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/privacy_agreement_part_1"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/textPrivacyPolicyLinkClickable"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:text="@string/privacy_agreement_part_2"
+                    android:textColor="@color/deep_purple"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonContinue"
@@ -210,7 +260,6 @@
                 android:layout_marginTop="24dp"
                 android:text="@string/continue_to_upload_photos"
                 android:textAllCaps="false" />
-
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

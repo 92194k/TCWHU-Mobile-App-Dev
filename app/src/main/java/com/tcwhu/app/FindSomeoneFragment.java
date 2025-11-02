@@ -5,20 +5,24 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.PagerSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
@@ -35,11 +39,13 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
     private FirebaseFirestore db;
     private TextView emptyView;
     private TextInputEditText inputSearch;
-    private LinearLayout chipContainer;
+    private ChipGroup chipContainer;
 
     private String currentFilterYear = "all";
     private String currentSearchQuery = "";
     private String currentUserId;
+
+    private List<String> blockedUsersList = new ArrayList<>(); // <-- ADDED
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -50,7 +56,8 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
         }
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_find_someone, container, false);
 
@@ -72,13 +79,19 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
     @Override
     public void onResume() {
         super.onResume();
-        loadAllVerifiedStudents();
+        loadCurrentUserProfile(); // <-- CHANGED: Load block list first
     }
 
     private void setupRecyclerView() {
+        if (recyclerView == null) {
+            Log.e("FindSomeoneFragment", "RecyclerView not found!");
+            return;
+        }
         adapter = new StudentFinderAdapter(filteredStudentList, this);
-        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        recyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         recyclerView.setAdapter(adapter);
+        PagerSnapHelper snapHelper = new PagerSnapHelper();
+        snapHelper.attachToRecyclerView(recyclerView);
     }
 
     private void setupSearchListener() {
@@ -92,36 +105,52 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
         });
     }
 
-    private void setupYearFilters(LinearLayout container) {
-        container.removeAllViews();
+    private void setupYearFilters(ChipGroup chipGroup) {
+        chipGroup.removeAllViews();
         List<String> years = Arrays.asList("all", "1st Year", "2nd Year", "3rd Year", "4th Year");
-        for (String year : years) {
-            Button button = new Button(getContext());
-            button.setText(year.equals("all") ? "All Years" : year);
-            button.setBackgroundResource(R.drawable.bg_search_input);
-            button.setTextColor(Color.BLACK);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.setMargins(0, 0, 8, 0);
-            button.setLayoutParams(params);
 
-            button.setOnClickListener(v -> {
-                currentFilterYear = year;
-                for (int i = 0; i < container.getChildCount(); i++) {
-                    container.getChildAt(i).setBackgroundResource(R.drawable.bg_search_input);
-                    ((Button)container.getChildAt(i)).setTextColor(Color.BLACK);
-                }
-                button.setBackgroundColor(Color.parseColor("#6A0DAD"));
-                button.setTextColor(Color.WHITE);
-                applyFilters();
-            });
-            container.addView(button);
+        for (String year : years) {
+            Chip chip = new Chip(getContext());
+            chip.setText(year.equals("all") ? "All Years" : year);
+            chip.setCheckable(true);
+            chip.setTag(year);
+            chipGroup.addView(chip);
         }
-        if (container.getChildCount() > 0) {
-            Button firstButton = (Button) container.getChildAt(0);
-            firstButton.setBackgroundColor(Color.parseColor("#6A0DAD"));
-            firstButton.setTextColor(Color.WHITE);
+
+        if (chipGroup.getChildCount() > 0) {
+            ((Chip) chipGroup.getChildAt(0)).setChecked(true);
         }
+
+        chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.isEmpty()) {
+                ((Chip) group.getChildAt(0)).setChecked(true);
+                currentFilterYear = "all";
+            } else {
+                int checkedId = checkedIds.get(0);
+                Chip selectedChip = group.findViewById(checkedId);
+                currentFilterYear = (String) selectedChip.getTag();
+            }
+            applyFilters();
+        });
+    }
+
+    // --- ADDED: Load current user's block list ---
+    private void loadCurrentUserProfile() {
+        if (currentUserId == null) return;
+        db.collection("users").document(currentUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Student currentUser = documentSnapshot.toObject(Student.class);
+                        if (currentUser != null && currentUser.getBlockedUsers() != null) {
+                            blockedUsersList = currentUser.getBlockedUsers();
+                        }
+                    }
+                    // After getting the block list, load all other students
+                    loadAllVerifiedStudents();
+                })
+                .addOnFailureListener(e -> {
+                    loadAllVerifiedStudents();
+                });
     }
 
     private void loadAllVerifiedStudents() {
@@ -136,13 +165,16 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             Student student = document.toObject(Student.class);
                             student.setUserId(document.getId());
-                            if (currentUserId != null && !student.getUserId().equals(currentUserId)) {
+                            // --- CRITICAL FIX: Hide self AND blocked users ---
+                            if (currentUserId != null
+                                    && !student.getUserId().equals(currentUserId)
+                                    && !blockedUsersList.contains(student.getUserId())) {
                                 allStudentList.add(student);
                             }
                         }
                         applyFilters();
                     } else {
-                        Toast.makeText(getContext(), "Error loading students. Check Firestore Index.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Error loading students.", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -183,5 +215,16 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
         Intent intent = new Intent(getActivity(), ChatWindowActivity.class);
         intent.putExtra(ChatWindowActivity.EXTRA_OTHER_USER_ID, student.getUserId());
         startActivity(intent);
+    }
+
+    @Override
+    public void onSkip(int currentPosition) {
+        if (recyclerView == null) return;
+        int nextPosition = currentPosition + 1;
+        if (nextPosition < adapter.getItemCount()) {
+            recyclerView.smoothScrollToPosition(nextPosition);
+        } else {
+            Toast.makeText(getContext(), "You've reached the end of the list!", Toast.LENGTH_SHORT).show();
+        }
     }
 }

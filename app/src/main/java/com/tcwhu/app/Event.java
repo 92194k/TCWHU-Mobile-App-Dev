@@ -3,15 +3,18 @@ package com.tcwhu.app;
 import com.google.firebase.firestore.Exclude;
 
 public class Event {
-    @Exclude private String id; // To store the Firestore document ID
+
+    @Exclude
+    private String id; // Firestore document ID
 
     private String title;
     private String description;
-    private long date;
-    private String imageUrl;
+    private long date;          // stored as timestamp
+    private String imageUrl;    // URL for event image
     private String postedBy;
+    private String targetId;    // optional, for admin targeting
+    private String icon;        // optional, emoji or text icon
 
-    // Required empty constructor for Firestore
     public Event() {}
 
     public Event(String title, String description, long date, String imageUrl, String postedBy) {
@@ -22,13 +25,43 @@ public class Event {
         this.postedBy = postedBy;
     }
 
-    // --- Getters and Setters ---
+    public Event(String title, String description, long date, String imageUrl, String postedBy, String targetId, String icon) {
+        this.title = title;
+        this.description = description;
+        this.date = date;
+        this.imageUrl = imageUrl;
+        this.postedBy = postedBy;
+        this.targetId = targetId;
+        this.icon = icon;
+    }
+
+    // --- Getters & Setters ---
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
     public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
     public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
     public long getDate() { return date; }
+    public void setDate(long date) { this.date = date; }
+
     public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
     public String getPostedBy() { return postedBy; }
+    public void setPostedBy(String postedBy) { this.postedBy = postedBy; }
+
+    public String getTargetId() { return targetId; }
+    public void setTargetId(String targetId) { this.targetId = targetId; }
+
+    public String getIcon() { return icon; }
+    public void setIcon(String icon) { this.icon = icon; }
+
+    public String getFormattedDate() {
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MMM dd, yyyy");
+        return sdf.format(new java.util.Date(date));
+    }
 }

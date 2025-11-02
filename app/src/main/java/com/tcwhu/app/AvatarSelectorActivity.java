@@ -13,7 +13,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,29 +25,33 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
     private Map<String, List<String>> avatarMap;
     private AvatarAdapter avatarAdapter;
     private String selectedAvatar = null;
-
-    // NOTE: userId is still retrieved but is not used to write directly in this Activity.
     private String userId;
+    private FirebaseFirestore db;
 
     private CardView previewCard;
     private TextView previewAvatarText;
     private Button buttonConfirm;
+
+    // NEW: to distinguish who opened this activity
+    private boolean isFromProfile = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_avatar_selector);
 
+        db = FirebaseFirestore.getInstance();
         userId = getIntent().getStringExtra("userId");
 
-        // Safety check (optional but good practice)
+        // NEW: detect if opened from profile
+        isFromProfile = getIntent().getBooleanExtra("fromProfile", false);
+
         if (userId == null || userId.isEmpty()) {
-            // Can proceed without userId if its only purpose is to return data,
-            // but logging the error is best for debugging the flow.
-            // Log.e("AvatarSelector", "Warning: userId is null/empty.");
+            Toast.makeText(this, "Error: User ID is missing.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
         }
 
-        // Find views
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         previewCard = findViewById(R.id.previewCard);
         previewAvatarText = findViewById(R.id.previewAvatarText);
@@ -53,7 +59,6 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
         RecyclerView avatarRecyclerView = findViewById(R.id.avatarRecyclerView);
         buttonConfirm = findViewById(R.id.buttonConfirm);
 
-        // Setup UI and data
         setupToolbar(toolbar);
         setupAvatarData();
         setupCategoryChips(categoryChipGroup);
@@ -62,29 +67,46 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
 
         buttonConfirm.setOnClickListener(v -> {
             if (selectedAvatar != null) {
-                // --- CRITICAL UNIVERSAL FIX --- ✅
-                // Always return the selected avatar via RESULT_OK.
-                // The calling Activity (SignUp or ProfileFragment) is responsible for DB updates.
-                Intent resultIntent = new Intent();
-                resultIntent.putExtra("selectedAvatar", selectedAvatar);
-                resultIntent.putExtra("userId", userId); // Pass back the userId just in case
-                setResult(RESULT_OK, resultIntent);
-                finish();
+                if (isFromProfile) {
+                    // 👇 NEW: return the avatar result instead of navigating
+                    Intent resultIntent = new Intent();
+                    resultIntent.putExtra("selectedAvatar", selectedAvatar);
+                    setResult(RESULT_OK, resultIntent);
+                    finish();
+                } else {
+                    // 👇 Sign-up flow: save avatar to Firestore then go to pending verification
+                    saveAvatarToFirestoreAndProceed(selectedAvatar);
+                }
             } else {
-                Toast.makeText(AvatarSelectorActivity.this, "Please select an avatar first.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Please select an avatar first.", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    // NOTE: The previous method updateUserAvatarAndProceed() is REMOVED from this Activity.
-    // It is now the responsibility of StudentProfileFragment.java or StudentSignUpActivity.java to handle the update.
+    private void saveAvatarToFirestoreAndProceed(String avatar) {
+        Map<String, Object> avatarUpdate = new HashMap<>();
+        avatarUpdate.put("avatar", avatar);
+
+        db.collection("users").document(userId).update(avatarUpdate)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(AvatarSelectorActivity.this, "Registration complete.", Toast.LENGTH_SHORT).show();
+
+                    Intent intent = new Intent(AvatarSelectorActivity.this, PendingVerificationActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed to save avatar and complete signup.", Toast.LENGTH_LONG).show()
+                );
+    }
 
     @Override
     public void onAvatarClick(String avatar) {
         selectedAvatar = avatar;
 
         int position = -1;
-        if (avatarAdapter != null) {
+        if (avatarAdapter != null && avatarAdapter.getAvatarList() != null) {
             List<String> currentList = avatarAdapter.getAvatarList();
             for (int i = 0; i < currentList.size(); i++) {
                 if (currentList.get(i).equals(avatar)) {
@@ -101,7 +123,7 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
         previewCard.setVisibility(View.VISIBLE);
         previewAvatarText.setText(avatar);
         buttonConfirm.setEnabled(true);
-        buttonConfirm.setText("Confirm Selection");
+        buttonConfirm.setText(isFromProfile ? "Save Avatar" : "Confirm Selection");
     }
 
     private void setupToolbar(MaterialToolbar toolbar) {
@@ -130,7 +152,7 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
 
     private void updateAvatarGrid(String category, ChipGroup chipGroup) {
         List<String> avatars = avatarMap.get(category);
-        if (avatarAdapter != null) {
+        if (avatarAdapter != null && avatars != null) {
             avatarAdapter.updateAvatars(avatars);
             avatarAdapter.setSelectedPosition(RecyclerView.NO_POSITION);
         }

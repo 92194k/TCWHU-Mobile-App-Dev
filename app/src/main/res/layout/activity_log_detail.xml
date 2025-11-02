@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?attr/colorSurface"
+    tools:context=".ActivityLogDetailActivity">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/deep_purple"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="@color/pure_white"
+        app:title="Log Details"
+        app:titleTextColor="@color/pure_white" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Action Performed"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android_textStyle="bold"
+                android:textAllCaps="true"/>
+
+            <TextView
+                android:id="@+id/textDetailAction"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                tools:text="Approved user: BlueDragon" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#e0e0e0"
+                android:layout_marginVertical="16dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Admin"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android_textStyle="bold"
+                android:textAllCaps="true"/>
+
+            <TextView
+                android:id="@+id/textDetailAdminId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="16sp"
+                tools:text="Kem Super Admin" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Timestamp"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android_textStyle="bold"
+                android:textAllCaps="true"/>
+
+            <TextView
+                android:id="@+id/textDetailTimestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="16sp"
+                tools:text="Nov 03, 2025, 2:15:30 AM" />
+
+            <TextView
+                android:id="@+id/textDetailTargetIdLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Target User/Item ID"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android_textStyle="bold"
+                android:textAllCaps="true"/>
+
+            <TextView
+                android:id="@+id/textDetailTargetId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="14sp"
+                android:textIsSelectable="true"
+                tools:text="1bA9s2yD8fG... (User ID)" />
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

@@ -10,13 +10,11 @@
     android:padding="24dp"
     tools:context=".LandingActivity">
 
-    <!-- Spacer -->
     <Space
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- Icon and Titles -->
     <FrameLayout
         android:layout_width="112dp"
         android:layout_height="112dp"
@@ -27,7 +25,8 @@
             android:layout_height="56dp"
             android:layout_gravity="center"
             android:src="@drawable/ic_graduation_cap"
-            app:tint="@color/pure_white" />
+            app:tint="@color/pure_white"
+            android:contentDescription="App Logo" />
     </FrameLayout>
 
     <TextView
@@ -47,15 +46,11 @@
         android:textColor="@color/text_secondary"
         android:textSize="16sp" />
 
-    <!-- Spacer -->
     <Space
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1.5" />
 
-    <!-- Buttons Section -->
-
-    <!-- Button 1: Student Login (Uses PrimaryButton style) -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonStudentLogin"
         style="@style/PrimaryButton"
@@ -66,7 +61,6 @@
         app:icon="@drawable/ic_arrow_forward"
         app:iconGravity="textEnd" />
 
-    <!-- Button 2: Student Sign Up (Uses SecondaryButton style) -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonStudentSignUp"
         style="@style/SecondaryButton"
@@ -78,7 +72,6 @@
         app:icon="@drawable/ic_arrow_forward"
         app:iconGravity="textEnd" />
 
-    <!-- Button 3: Admin Login (Uses PrimaryButton style, but overrides color) -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonAdminLogin"
         style="@style/PrimaryButton"
@@ -99,10 +92,24 @@
         android:textColor="@color/text_secondary"
         android:textSize="12sp" />
 
-    <!-- Spacer -->
     <Space
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/textPrivacyPolicy"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="Privacy Rules and Guidelines"
+        android:textColor="@color/deep_purple"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:padding="8dp"/>
 
 </LinearLayout>

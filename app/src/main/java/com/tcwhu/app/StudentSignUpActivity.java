@@ -6,6 +6,7 @@ import android.util.Patterns;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -19,7 +20,6 @@ import java.util.Map;
 
 public class StudentSignUpActivity extends AppCompatActivity {
 
-    // CRITICAL FIX: All UI component variables MUST be declared here
     private TextInputEditText inputStudentNumber, inputEmail, inputPassword, inputConfirmPassword, inputNickname, inputInterests;
     private AutoCompleteTextView inputYearLevel;
     private MaterialCheckBox checkboxPrivacy;
@@ -30,15 +30,13 @@ public class StudentSignUpActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_student_signup);
+
         mAuth = FirebaseAuth.getInstance();
 
-        // --- Find all the views (Matching the XML IDs) ---
         inputStudentNumber = findViewById(R.id.inputStudentNumber);
         inputEmail = findViewById(R.id.inputEmail);
         inputPassword = findViewById(R.id.inputPassword);
         inputConfirmPassword = findViewById(R.id.inputConfirmPassword);
-
-        // FIX: Missing FindViewById calls
         inputNickname = findViewById(R.id.inputNickname);
         inputYearLevel = findViewById(R.id.inputYearLevel);
         inputInterests = findViewById(R.id.inputInterests);
@@ -48,6 +46,14 @@ public class StudentSignUpActivity extends AppCompatActivity {
         setupToolbar();
         setupYearLevelDropdown();
 
+        // ✅ Handle clickable Privacy Policy link
+        TextView textPrivacyPolicyLinkClickable = findViewById(R.id.textPrivacyPolicyLinkClickable);
+        textPrivacyPolicyLinkClickable.setOnClickListener(v -> {
+            Intent intent = new Intent(StudentSignUpActivity.this, PrivacyPolicyActivity.class);
+            startActivity(intent);
+        });
+
+        // Continue button
         buttonContinue.setOnClickListener(v -> {
             if (isFormValid()) {
                 registerUserAndProceedToPhotoUpload();
@@ -96,7 +102,8 @@ public class StudentSignUpActivity extends AppCompatActivity {
         String nickname = inputNickname.getText().toString().trim();
         String yearLevel = inputYearLevel.getText().toString().trim();
 
-        if (studentNumber.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || nickname.isEmpty() || yearLevel.isEmpty()) {
+        if (studentNumber.isEmpty() || email.isEmpty() || password.isEmpty() ||
+                confirmPassword.isEmpty() || nickname.isEmpty() || yearLevel.isEmpty()) {
             Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show();
             return false;
         }
@@ -126,8 +133,7 @@ public class StudentSignUpActivity extends AppCompatActivity {
 
     private void setupYearLevelDropdown() {
         String[] yearLevels = new String[]{"1st Year", "2nd Year", "3rd Year", "4th Year"};
-        AutoCompleteTextView dropdown = findViewById(R.id.inputYearLevel);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, yearLevels);
-        dropdown.setAdapter(adapter);
+        inputYearLevel.setAdapter(adapter);
     }
 }

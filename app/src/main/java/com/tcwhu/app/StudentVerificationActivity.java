@@ -8,6 +8,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
@@ -22,6 +24,8 @@ public class StudentVerificationActivity extends AppCompatActivity {
     private List<Student> studentList;
     private FirebaseFirestore db;
     private TextView emptyView;
+
+    private String currentAdminNickname = "System Admin"; // Default nickname for safety
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,12 +43,31 @@ public class StudentVerificationActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
         setupRecyclerView();
+
+        // CRITICAL FIX: Load the current admin's nickname right away
+        loadAdminNickname();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         loadUnverifiedStudents();
+    }
+
+    private void loadAdminNickname() {
+        FirebaseUser admin = FirebaseAuth.getInstance().getCurrentUser();
+        if (admin != null) {
+            // Fetch nickname from the 'admins' collection using their UID
+            db.collection("admins").document(admin.getUid()).get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            String name = documentSnapshot.getString("nickname");
+                            if (name != null) {
+                                currentAdminNickname = name; // Update the nickname variable
+                            }
+                        }
+                    });
+        }
     }
 
     private void setupRecyclerView() {
@@ -85,9 +108,9 @@ public class StudentVerificationActivity extends AppCompatActivity {
         db.collection("users").document(student.getUserId()).update("isVerified", true)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, student.getNickname() + " approved.", Toast.LENGTH_SHORT).show();
-                    // --- ACTIVITY LOGGING ---
-                    logAdminAction("Approved user: " + student.getNickname(), student.getUserId());
-                    loadUnverifiedStudents(); // Refresh the list
+                    // Log the action using the actual nickname
+                    logAdminAction(currentAdminNickname, "Approved user: " + student.getNickname(), student.getUserId());
+                    loadUnverifiedStudents();
                 });
     }
 
@@ -95,24 +118,20 @@ public class StudentVerificationActivity extends AppCompatActivity {
         db.collection("users").document(student.getUserId()).delete()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, student.getNickname() + " rejected and removed.", Toast.LENGTH_SHORT).show();
-                    // --- ACTIVITY LOGGING ---
-                    logAdminAction("Rejected and removed user: " + student.getNickname(), student.getUserId());
-                    loadUnverifiedStudents(); // Refresh the list
+                    // Log the action using the actual nickname
+                    logAdminAction(currentAdminNickname, "Rejected and removed user: " + student.getNickname(), student.getUserId());
+                    loadUnverifiedStudents();
                 });
     }
 
-    // --- NEW METHOD TO SAVE LOGS TO FIRESTORE ---
-    private void logAdminAction(String action, String targetId) {
-        // In a real app, you would get the admin's actual ID/name
-        String adminId = "admin_user";
-
+    // --- LOGGING METHOD (Updated to use nickname) ---
+    private void logAdminAction(String adminNickname, String action, String targetId) {
         Map<String, Object> log = new HashMap<>();
-        log.put("adminId", adminId);
+        log.put("adminId", adminNickname); // CRITICAL: Use the nickname here
         log.put("action", action);
         log.put("targetId", targetId);
         log.put("timestamp", System.currentTimeMillis());
 
-        // Save to the 'activity_logs' collection in Firestore
         db.collection("activity_logs").add(log);
     }
 

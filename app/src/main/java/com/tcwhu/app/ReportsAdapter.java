@@ -20,7 +20,7 @@ public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHold
     }
 
     private List<Report> reportList;
-    private Map<String, String> userNicknameMap; // Map to store user nicknames
+    private Map<String, String> userNicknameMap; // Map of userId -> nickname
     private OnActionListener listener;
 
     public ReportsAdapter(List<Report> reportList, Map<String, String> userNicknameMap, OnActionListener listener) {
@@ -29,7 +29,8 @@ public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHold
         this.listener = listener;
     }
 
-    @NonNull @Override
+    @NonNull
+    @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_report, parent, false);
         return new ViewHolder(view);
@@ -41,7 +42,9 @@ public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHold
     }
 
     @Override
-    public int getItemCount() { return reportList.size(); }
+    public int getItemCount() {
+        return reportList != null ? reportList.size() : 0;
+    }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView reportTitle, reportDetails;
@@ -62,7 +65,7 @@ public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHold
 
             reportTitle.setText("Report from " + reporterName);
 
-            SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy, h:mm a", Locale.US);
+            SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy, h:mm a", Locale.getDefault());
             String formattedDate = formatter.format(new Date(report.getTimestamp()));
 
             String details = "Reported User: " + reportedName +

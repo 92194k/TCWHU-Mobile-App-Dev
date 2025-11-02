@@ -7,9 +7,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.android.material.button.MaterialButton;
+
 import java.util.List;
 
 public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapter.ViewHolder> {
@@ -19,6 +22,7 @@ public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapte
         void onUnsuspend(String userId);
         void onUnban(String userId);
         void onDelete(String userId);
+        void onReview(Student student);
     }
 
     private List<Student> studentList;
@@ -29,7 +33,8 @@ public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapte
         this.listener = listener;
     }
 
-    @NonNull @Override
+    @NonNull
+    @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_user_overview, parent, false);
         return new ViewHolder(view);
@@ -37,16 +42,17 @@ public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapte
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Student student = studentList.get(position);
-        holder.bind(student, listener);
+        holder.bind(studentList.get(position), listener);
     }
 
     @Override
-    public int getItemCount() { return studentList.size(); }
+    public int getItemCount() {
+        return studentList.size();
+    }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView textAvatar, textNickname, textStudentNumber, textStatus;
-        MaterialButton buttonDynamicAction;
+        MaterialButton buttonSuspend, buttonBan;
         ImageButton buttonDelete;
 
         public ViewHolder(@NonNull View itemView) {
@@ -55,51 +61,56 @@ public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapte
             textNickname = itemView.findViewById(R.id.textNickname);
             textStudentNumber = itemView.findViewById(R.id.textStudentNumber);
             textStatus = itemView.findViewById(R.id.textStatus);
-            buttonDynamicAction = itemView.findViewById(R.id.buttonDynamicAction);
+            buttonSuspend = itemView.findViewById(R.id.buttonSuspendAction);
+            buttonBan = itemView.findViewById(R.id.buttonBanReviewAction);
             buttonDelete = itemView.findViewById(R.id.buttonDelete);
         }
 
         public void bind(final Student student, final OnActionListener listener) {
-            String nickname = student.getNickname() != null ? student.getNickname() : "N/A";
-            String studentNumber = student.getStudentNumber() != null ? student.getStudentNumber() : "N/A";
-            String avatar = student.getAvatar() != null ? student.getAvatar() : "?";
+            textAvatar.setText(student.getAvatar() != null ? student.getAvatar() : "👤");
+            textNickname.setText(student.getNickname() != null ? student.getNickname() : "Unknown");
+            textStudentNumber.setText(student.getStudentNumber() != null ? student.getStudentNumber() : "N/A");
 
-            textAvatar.setText(avatar);
-            textNickname.setText(nickname);
-            textStudentNumber.setText(studentNumber);
+            buttonSuspend.setVisibility(View.GONE);
+            buttonBan.setVisibility(View.GONE);
 
             if (student.isBanned()) {
-                setStatus(Color.parseColor("#B71C1C"), "BANNED");
-                setDynamicAction("UNBAN", R.drawable.ic_shield_off, v -> listener.onUnban(student.getUserId()), Color.parseColor("#388E3C"));
+                setStatus("#B71C1C", "BANNED");
+                configureButton(buttonBan, "UNBAN", Color.parseColor("#388E3C"), v -> listener.onUnban(student.getUserId()));
+                buttonBan.setVisibility(View.VISIBLE);
+
             } else if (student.isSuspended()) {
-                setStatus(Color.parseColor("#F57C00"), "SUSPENDED");
-                setDynamicAction("UNSUSPEND", R.drawable.ic_clock, v -> listener.onUnsuspend(student.getUserId()), Color.parseColor("#FFD700"));
+                setStatus("#FFA000", "SUSPENDED");
+                configureButton(buttonSuspend, "UNSUSPEND", Color.parseColor("#388E3C"), v -> listener.onUnsuspend(student.getUserId()));
+                buttonSuspend.setVisibility(View.VISIBLE);
+
             } else if (!student.isVerified()) {
-                setStatus(Color.parseColor("#FFA000"), "PENDING");
-                setDynamicAction("REVIEW", R.drawable.ic_view, v -> {}, Color.parseColor("#6A0DAD"));
+                setStatus("#FFA000", "PENDING");
+                configureButton(buttonBan, "REVIEW", Color.parseColor("#6A0DAD"), v -> listener.onReview(student));
+                buttonBan.setVisibility(View.VISIBLE);
+
             } else {
-                setStatus(Color.parseColor("#388E3C"), "VERIFIED");
-                setDynamicAction("BAN", R.drawable.ic_ban, v -> listener.onBan(student.getUserId()), Color.parseColor("#B71C1C"));
+                setStatus("#388E3C", "VERIFIED");
+                configureButton(buttonSuspend, "SUSPEND", Color.parseColor("#F57C00"), v -> listener.onUnsuspend(student.getUserId()));
+                configureButton(buttonBan, "BAN", Color.parseColor("#B71C1C"), v -> listener.onBan(student.getUserId()));
+                buttonSuspend.setVisibility(View.VISIBLE);
+                buttonBan.setVisibility(View.VISIBLE);
             }
 
             buttonDelete.setOnClickListener(v -> listener.onDelete(student.getUserId()));
         }
 
-        private void setStatus(int color, String text) {
+        private void setStatus(String color, String text) {
             textStatus.setText(text);
-            textStatus.setTextColor(color);
+            textStatus.setTextColor(Color.parseColor(color));
         }
 
-        private void setDynamicAction(String text, int iconRes, View.OnClickListener clickListener, int color) {
-            buttonDynamicAction.setText(text);
-            buttonDynamicAction.setIconResource(iconRes);
-
-            ColorStateList colorStateList = ColorStateList.valueOf(color);
-            buttonDynamicAction.setTextColor(colorStateList);
-            buttonDynamicAction.setIconTint(colorStateList);
-            buttonDynamicAction.setStrokeColor(colorStateList);
-
-            buttonDynamicAction.setOnClickListener(clickListener);
+        private void configureButton(MaterialButton button, String label, int color, View.OnClickListener click) {
+            button.setText(label);
+            button.setTextColor(ColorStateList.valueOf(color));
+            button.setStrokeColor(ColorStateList.valueOf(color));
+            button.setIconTint(ColorStateList.valueOf(color));
+            button.setOnClickListener(click);
         }
     }
 }

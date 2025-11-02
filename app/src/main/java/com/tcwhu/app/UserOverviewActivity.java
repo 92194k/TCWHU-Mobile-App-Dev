@@ -1,5 +1,6 @@
 package com.tcwhu.app;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -9,14 +10,17 @@ import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,10 +46,7 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         setContentView(R.layout.activity_user_overview);
 
         db = FirebaseFirestore.getInstance();
-
-        // CRITICAL FIX: Changed ID from R.id.recyclerView to R.id.usersRecyclerView
         recyclerView = findViewById(R.id.usersRecyclerView);
-
         emptyView = findViewById(R.id.emptyView);
         inputSearch = findViewById(R.id.inputSearch);
         spinnerFilter = findViewById(R.id.spinnerFilter);
@@ -149,19 +150,45 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         checkIfEmpty();
     }
 
-    // --- Action Listeners (Implement UserOverviewAdapter.OnActionListener) ---
+    private void checkIfEmpty() {
+        emptyView.setVisibility(filteredStudentList.isEmpty() ? View.VISIBLE : View.GONE);
+        recyclerView.setVisibility(filteredStudentList.isEmpty() ? View.GONE : View.VISIBLE);
+    }
 
-    @Override public void onBan(String userId) { showConfirmationDialog("Ban User", "Are you sure you want to permanently ban this user?", userId, "ban", "#B71C1C"); }
-    @Override public void onUnsuspend(String userId) { showConfirmationDialog("Unsuspend User", "Are you sure you want to lift the suspension for this user?", userId, "unsuspend", "#388E3C"); }
-    @Override public void onUnban(String userId) { showConfirmationDialog("Unban User", "Are you sure you want to unban this user and restore their access?", userId, "unban", "#388E3C"); }
-    @Override public void onDelete(String userId) { showConfirmationDialog("Delete Account", "WARNING: This action is permanent and removes the user from the database and authentication system.", userId, "delete", "#D32F2F"); }
+    // --- ACTION HANDLERS ---
+    @Override
+    public void onBan(String userId) {
+        showConfirmationDialog("Ban User", "Are you sure you want to permanently ban this user?", userId, "ban");
+    }
 
-    private void showConfirmationDialog(String title, String message, String userId, String action, String colorHex) {
+    @Override
+    public void onUnsuspend(String userId) {
+        showConfirmationDialog("Unsuspend User", "Are you sure you want to lift this suspension?", userId, "unsuspend");
+    }
+
+    @Override
+    public void onUnban(String userId) {
+        showConfirmationDialog("Unban User", "Are you sure you want to unban this user?", userId, "unban");
+    }
+
+    @Override
+    public void onDelete(String userId) {
+        showConfirmationDialog("Delete Account", "This action will permanently remove this user. Continue?", userId, "delete");
+    }
+
+    @Override
+    public void onReview(Student student) {
+        Intent intent = new Intent(this, StudentVerificationActivity.class);
+        intent.putExtra("studentId", student.getUserId());
+        startActivity(intent);
+    }
+
+    private void showConfirmationDialog(String title, String message, String userId, String action) {
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(message)
-                .setPositiveButton(action.toUpperCase(), (dialog, which) -> executeUserAction(userId, action))
-                .setNegativeButton("Cancel", null)
+                .setPositiveButton("YES", (dialog, which) -> executeUserAction(userId, action))
+                .setNegativeButton("CANCEL", null)
                 .show();
     }
 
@@ -169,7 +196,7 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         if ("delete".equals(action)) {
             db.collection("users").document(userId).delete()
                     .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "User deleted from Firestore.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "User deleted.", Toast.LENGTH_SHORT).show();
                         loadAllStudents();
                     });
             return;
@@ -181,32 +208,21 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
             case "ban":
                 updates.put("isBanned", true);
                 updates.put("isSuspended", false);
-                updates.put("isVerified", true);
                 break;
             case "unsuspend":
                 updates.put("isSuspended", false);
-                updates.put("isBanned", false);
                 break;
             case "unban":
                 updates.put("isBanned", false);
-                updates.put("isSuspended", false);
                 break;
-            default:
-                return;
         }
 
         db.collection("users").document(userId).update(updates)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "User status updated to " + action.toUpperCase() + ".", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "User " + action + "ed successfully.", Toast.LENGTH_SHORT).show();
                     loadAllStudents();
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Failed to update user status.", Toast.LENGTH_SHORT).show();
-                });
-    }
-
-    private void checkIfEmpty() {
-        emptyView.setVisibility(filteredStudentList.isEmpty() ? View.VISIBLE : View.GONE);
-        recyclerView.setVisibility(filteredStudentList.isEmpty() ? View.GONE : View.VISIBLE);
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed to update user.", Toast.LENGTH_SHORT).show());
     }
 }

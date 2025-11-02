@@ -1,15 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/deep_purple</item>
 
+    <!-- ✅ Unified Day/Night Theme (Base + AppTheme merged) -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Branding Colors -->
+        <item name="colorPrimary">@color/deep_purple</item>
+        <item name="colorPrimaryVariant">@color/deep_purple_dark</item>
+        <item name="colorOnPrimary">@color/text_on_primary</item>
+
+        <!-- Status & Navigation Bar -->
+        <item name="android:statusBarColor">@color/deep_purple</item>
+        <item name="android:navigationBarColor">@color/deep_purple_dark</item>
+
+        <!-- Translucency & Fullscreen -->
         <item name="android:windowTranslucentNavigation">true</item>
         <item name="android:windowTranslucentStatus">true</item>
-
         <item name="android:windowFullscreen">true</item>
 
-        <item name="android:statusBarColor">@color/deep_purple</item>
+        <!-- Background & Text -->
         <item name="android:windowBackground">@color/pure_white</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
+
+        <!-- Dark mode automatic adaptation -->
+        <item name="android:forceDarkAllowed">true</item>
     </style>
+
 </resources>

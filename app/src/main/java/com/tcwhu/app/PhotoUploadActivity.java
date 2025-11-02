@@ -134,13 +134,14 @@ public class PhotoUploadActivity extends AppCompatActivity {
     }
 
     private void saveUserProfileAndProceed() {
-        // --- THIS IS THE CORRECTED LINE ---
         // Use .set() to CREATE the document for the first time.
         FirebaseFirestore.getInstance().collection("users").document(userId).set(userData)
                 .addOnSuccessListener(aVoid -> {
+                    // Navigate to the Avatar Selector screen
                     Intent intent = new Intent(this, AvatarSelectorActivity.class);
                     intent.putExtra("userId", userId);
                     startActivity(intent);
+                    finish(); // <-- CRITICAL FIX: Close this activity to maintain clean navigation
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Failed to save profile: " + e.getMessage(), Toast.LENGTH_LONG).show();

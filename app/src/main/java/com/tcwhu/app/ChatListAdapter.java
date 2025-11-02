@@ -3,6 +3,7 @@ package com.tcwhu.app;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -10,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.auth.FirebaseAuth;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -30,11 +32,41 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         this.studentMap = studentMap;
         this.listener = listener;
         this.currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        cleanDeletedUsers();
     }
 
-    @NonNull @Override
+    private void cleanDeletedUsers() {
+        if (chatList == null || studentMap == null) return;
+
+        Iterator<Chat> iterator = chatList.iterator();
+        while (iterator.hasNext()) {
+            Chat chat = iterator.next();
+
+            // --- CRITICAL FIX: Calls getUsers() ---
+            if (chat.getUsers() == null || chat.getUsers().isEmpty()) {
+                iterator.remove();
+                continue;
+            }
+
+            String otherUserId = null;
+            for (String id : chat.getUsers()) { // --- CRITICAL FIX: Calls getUsers() ---
+                if (!id.equals(currentUserId)) {
+                    otherUserId = id;
+                    break;
+                }
+            }
+
+            if (otherUserId == null || !studentMap.containsKey(otherUserId)) {
+                iterator.remove();
+            }
+        }
+    }
+
+    @NonNull
+    @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_chat_list, parent, false);
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_chat_list, parent, false);
         return new ViewHolder(view);
     }
 
@@ -42,30 +74,38 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Chat chat = chatList.get(position);
 
-        // Safety check to prevent crashes from broken data in Firestore.
-        if (chat.getUsers() == null || chat.getUsers().isEmpty()) { // Uses getUsers()
+        // --- CRITICAL FIX: Calls getUsers() ---
+        if (chat.getUsers() == null || chat.getUsers().isEmpty()) {
             holder.itemView.setVisibility(View.GONE);
             holder.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
             return;
         }
 
         holder.itemView.setVisibility(View.VISIBLE);
-        holder.itemView.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        holder.itemView.setLayoutParams(new RecyclerView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        String otherUserId = chat.getUsers().stream() // Uses getUsers()
-                .filter(id -> !id.equals(currentUserId))
-                .findFirst().orElse(null);
+        String otherUserId = null;
+        for (String id : chat.getUsers()) { // --- CRITICAL FIX: Calls getUsers() ---
+            if (!id.equals(currentUserId)) {
+                otherUserId = id;
+                break;
+            }
+        }
 
         Student otherUser = studentMap.get(otherUserId);
         holder.bind(otherUser, chat, listener, otherUserId);
     }
 
     @Override
-    public int getItemCount() { return chatList.size(); }
+    public int getItemCount() {
+        return chatList != null ? chatList.size() : 0;
+    }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView textAvatar, textNickname, textLastMessage, textTime;
-        LinearLayout avatarContainer;
+        FrameLayout avatarContainer;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -76,22 +116,25 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
             avatarContainer = itemView.findViewById(R.id.avatarContainer);
         }
 
-        public void bind(final Student otherUser, final Chat chat, final OnChatSelectedListener listener, final String otherUserId) {
+        public void bind(final Student otherUser, final Chat chat,
+                         final OnChatSelectedListener listener, final String otherUserId) {
+
             if (otherUser != null) {
                 textNickname.setText(otherUser.getNickname() != null ? otherUser.getNickname() : "Unknown User");
                 textAvatar.setText(otherUser.getAvatar() != null ? otherUser.getAvatar() : "?");
+                textLastMessage.setText(chat.getLastMessage() != null ? chat.getLastMessage() : "");
 
-                SimpleDateFormat formatter = new SimpleDateFormat("h:mm a", Locale.US);
-                textTime.setText(formatter.format(new Date(chat.getTimestamp())));
-
-                textLastMessage.setText(chat.getLastMessage());
+                if (chat.getTimestamp() > 0) {
+                    SimpleDateFormat formatter = new SimpleDateFormat("h:mm a", Locale.getDefault());
+                    textTime.setText(formatter.format(new Date(chat.getTimestamp())));
+                } else {
+                    textTime.setText("");
+                }
 
                 itemView.setOnClickListener(v -> listener.onChatSelected(otherUserId));
             } else {
-                textNickname.setText("User Not Found");
-                textAvatar.setText("?");
-                textLastMessage.setText(chat.getLastMessage());
-                itemView.setOnClickListener(null);
+                itemView.setVisibility(View.GONE);
+                itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
             }
         }
     }

@@ -5,18 +5,21 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout; // <-- IMPORT ADDED
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class StudentFinderAdapter extends RecyclerView.Adapter<StudentFinderAdapter.ViewHolder> {
 
     public interface OnChatStartListener {
         void onChatStart(Student student);
+        void onSkip(int position); // ADDED
     }
 
     private List<Student> studentList;
@@ -35,16 +38,20 @@ public class StudentFinderAdapter extends RecyclerView.Adapter<StudentFinderAdap
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(studentList.get(position), listener);
+        holder.bind(studentList.get(position), listener, position); // Pass position
     }
 
     @Override
     public int getItemCount() { return studentList.size(); }
 
+    public List<String> getAvatarList() {
+        return studentList.stream().map(Student::getAvatar).collect(Collectors.toList());
+    }
+
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView textAvatar, textNickname, textYearLevel;
-        MaterialButton buttonStartChat;
-        FrameLayout avatarContainer; // <-- CHANGED FROM LinearLayout TO FrameLayout ✅
+        MaterialButton buttonConnect, buttonSkip;
+        FrameLayout avatarContainer;
         LinearLayout interestsContainer;
 
         public ViewHolder(@NonNull View itemView) {
@@ -52,12 +59,13 @@ public class StudentFinderAdapter extends RecyclerView.Adapter<StudentFinderAdap
             textAvatar = itemView.findViewById(R.id.textAvatar);
             textNickname = itemView.findViewById(R.id.textNickname);
             textYearLevel = itemView.findViewById(R.id.textYearLevel);
-            buttonStartChat = itemView.findViewById(R.id.buttonStartChat);
-            avatarContainer = itemView.findViewById(R.id.avatarContainer); // This now matches the XML
+            buttonConnect = itemView.findViewById(R.id.buttonConnect);
+            buttonSkip = itemView.findViewById(R.id.buttonSkip);
+            avatarContainer = itemView.findViewById(R.id.avatarContainer);
             interestsContainer = itemView.findViewById(R.id.interestsContainer);
         }
 
-        public void bind(final Student student, final OnChatStartListener listener) {
+        public void bind(final Student student, final OnChatStartListener listener, final int position) {
             String nickname = (student.getNickname() != null) ? student.getNickname() : "Unknown";
             String yearLevel = (student.getYearLevel() != null) ? student.getYearLevel() : "";
             String avatar = student.getAvatar();
@@ -73,7 +81,7 @@ public class StudentFinderAdapter extends RecyclerView.Adapter<StudentFinderAdap
             GradientDrawable gradient = new GradientDrawable(
                     GradientDrawable.Orientation.BR_TL,
                     new int[]{Color.parseColor("#6A0DAD"), Color.parseColor("#5A0B92")});
-            gradient.setCornerRadius(1000f);
+            gradient.setCornerRadius(0f);
             avatarContainer.setBackground(gradient);
 
             interestsContainer.removeAllViews();
@@ -94,7 +102,9 @@ public class StudentFinderAdapter extends RecyclerView.Adapter<StudentFinderAdap
                     interestsContainer.addView(tag);
                 }
             }
-            buttonStartChat.setOnClickListener(v -> listener.onChatStart(student));
+
+            buttonConnect.setOnClickListener(v -> listener.onChatStart(student));
+            buttonSkip.setOnClickListener(v -> listener.onSkip(getAdapterPosition()));
         }
     }
 }

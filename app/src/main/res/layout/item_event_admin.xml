@@ -1,69 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="2dp">
+    android:layout_margin="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    android:foreground="?android:attr/selectableItemBackground">
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:orientation="vertical"
+        android:background="@color/pure_white"
+        android:padding="12dp">
+
+        <ImageView
+            android:id="@+id/imageEvent"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:scaleType="centerCrop"
+            android:layout_marginBottom="8dp"
+            android:background="@color/darker_gray"
+            android:visibility="gone"
+            tools:visibility="visible"
+            tools:src="@drawable/ic_delete" />
+
+        <TextView
+            android:id="@+id/textEventTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            tools:text="Campus Cleanup Event" />
+
+        <TextView
+            android:id="@+id/textEventDescription"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:layout_marginTop="4dp"
+            tools:text="Join us for a cleanup around the campus this weekend!" />
 
         <LinearLayout
-            android:id="@+id/eventDetailsLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_toStartOf="@id/buttonDeleteEvent"
-            android:layout_marginEnd="16dp"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
 
             <TextView
-                android:id="@+id/eventTitleTextView"
+                android:id="@+id/textPostedBy"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                tools:text="Event Title" />
-
-            <TextView
-                android:id="@+id/eventDateTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
-                app:drawableStartCompat="@drawable/ic_events"
-                app:drawableTint="@color/deep_purple"
-                android:drawablePadding="4dp"
-                tools:text="Oct 24, 2025" />
+                tools:text="Posted by: Student Affairs" />
 
             <TextView
-                android:id="@+id/eventDescriptionTextView"
+                android:id="@+id/textEventDate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
                 android:textColor="@color/text_secondary"
-                android:textSize="14sp"
-                android:maxLines="2"
-                tools:text="Short event description..." />
-
+                android:textSize="12sp"
+                android:layout_marginStart="8dp"
+                tools:text="— Oct 30, 2025" />
         </LinearLayout>
 
-        <ImageButton
-            android:id="@+id/buttonDeleteEvent"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_delete"
-            app:tint="#D32F2F"
-            android:contentDescription="Delete Event"/>
+        <TextView
+            android:id="@+id/textTargetId"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:visibility="gone"
+            tools:text="Target: user_abc123" />
 
-    </RelativeLayout>
+        <ImageView
+            android:id="@+id/buttonDeleteEvent"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginTop="8dp"
+            android:layout_gravity="end"
+            android:src="@drawable/ic_delete"
+            android:contentDescription="Delete Event"
+            android:tint="@color/red_600"
+            android:padding="6dp"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+    </LinearLayout>
+
 </com.google.android.material.card.MaterialCardView>

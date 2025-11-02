@@ -1,8 +1,10 @@
 package com.tcwhu.app;
 
 import com.google.firebase.firestore.Exclude;
+import java.io.Serializable;
+import java.util.List;
 
-public class Student {
+public class Student implements Serializable {
     @Exclude private String userId;
     private String studentNumber;
     private String nickname;
@@ -14,8 +16,9 @@ public class Student {
     private boolean isBanned;
     private boolean isSuspended;
     private long createdAt;
-    private String selfiePhotoUrl; 
-    private String idPhotoUrl;      
+    private String selfiePhotoUrl;
+    private String idPhotoUrl;
+    private List<String> blockedUsers; // <-- ADDED
 
     public Student() {}
 
@@ -33,19 +36,9 @@ public class Student {
     public long getCreatedAt() { return createdAt; }
     public String getSelfiePhotoUrl() { return selfiePhotoUrl; }
     public String getIdPhotoUrl() { return idPhotoUrl; }
+    public List<String> getBlockedUsers() { return blockedUsers; } // <-- ADDED
 
     // --- Setter ---
     public void setUserId(String userId) { this.userId = userId; }
-    public void setStudentNumber(String studentNumber) { this.studentNumber = studentNumber; }
-    public void setNickname(String nickname) { this.nickname = nickname; }
-    public void setYearLevel(String yearLevel) { this.yearLevel = yearLevel; }
-    public void setInterests(String interests) { this.interests = interests; }
-    public void setAvatar(String avatar) { this.avatar = avatar; }
-    public void setEmail(String email) { this.email = email; }
-    public void setVerified(boolean verified) { isVerified = verified; }
-    public void setBanned(boolean banned) { isBanned = banned; }
-    public void setSuspended(boolean suspended) { isSuspended = suspended; }
-    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
-    public void setSelfiePhotoUrl(String selfiePhotoUrl) { this.selfiePhotoUrl = selfiePhotoUrl; }
-    public void setIdPhotoUrl(String idPhotoUrl) { this.idPhotoUrl = idPhotoUrl; }
+    // (Other setters are handled by Firestore)
 }

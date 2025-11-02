@@ -99,7 +99,9 @@ public class StudentProfileFragment extends Fragment {
         if (getActivity() == null) return;
         Intent intent = new Intent(getActivity(), AvatarSelectorActivity.class);
         intent.putExtra("userId", currentUser.getUid());
+        intent.putExtra("fromProfile", true); // ✅ important fix
         avatarSelectorLauncher.launch(intent);
+
     }
 
     private void updateAvatarInDatabase(String newAvatar) {

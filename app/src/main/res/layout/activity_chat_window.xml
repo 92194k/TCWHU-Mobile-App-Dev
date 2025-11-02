@@ -1,87 +1,110 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/pure_white"
+    android:fitsSystemWindows="true"
+    android:background="@color/light_gray"
     tools:context=".ChatWindowActivity">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/pure_white"
-        android:elevation="2dp"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:titleTextColor="@color/text_primary">
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-            <TextView
-                android:id="@+id/textChatUsername"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                tools:text="BlueDragon" />
-            <TextView
-                android:id="@+id/textChatYear"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                tools:text="2nd Year" />
-        </LinearLayout>
-    </com.google.android.material.appbar.MaterialToolbar>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/messagesRecyclerView"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/toolbar"
-        android:layout_above="@id/inputContainer"
-        android:paddingHorizontal="8dp"
-        android:scrollbars="vertical"
-        tools:listitem="@layout/item_message_sent" />
-
-    <LinearLayout
-        android:id="@+id/inputContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:background="@color/pure_white"
         android:orientation="vertical"
-        android:elevation="4dp"
-        android:padding="8dp">
+        android:fitsSystemWindows="true">
 
-        <LinearLayout
+        <!-- Toolbar -->
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:background="@color/pure_white"
+            android:elevation="2dp"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:titleTextColor="@color/text_primary">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textChatUsername"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    tools:text="BlueDragon" />
+
+                <TextView
+                    android:id="@+id/textChatYear"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    tools:text="2nd Year" />
+            </LinearLayout>
+        </com.google.android.material.appbar.MaterialToolbar>
+
+        <!-- Chat Banner -->
+        <TextView
+            android:id="@+id/textChattingWithBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:background="#F3E5F5"
+            android:textColor="@color/deep_purple"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            tools:text="You are chatting with BlueDragon" />
+
+        <!-- Message List -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/messagesRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="8dp"
+            android:clipToPadding="false"
+            android:scrollbars="vertical"
+            tools:listitem="@layout/item_message_sent" />
+
+        <!-- Input Container -->
+        <LinearLayout
+            android:id="@+id/inputContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp"
+            android:background="@color/pure_white"
+            android:elevation="4dp">
 
             <ImageButton
                 android:id="@+id/buttonPaperclip"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_view"
+                android:src="@drawable/ic_upload"
                 app:tint="@color/text_secondary"
-                android:contentDescription="Attach File"/>
+                android:contentDescription="Attach File" />
 
-            <com.google.android.material.textfield.TextInputEditText
+            <EditText
                 android:id="@+id/inputMessage"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:background="@drawable/bg_search_input"
                 android:hint="Type a message..."
                 android:minHeight="48dp"
                 android:paddingHorizontal="16dp"
-                android:textSize="16sp" />
+                android:background="@drawable/bg_search_input"
+                android:textSize="16sp"
+                android:imeOptions="actionSend"
+                android:inputType="textMultiLine|textCapSentences" />
 
             <ImageButton
                 android:id="@+id/buttonMic"
@@ -89,10 +112,9 @@
                 android:layout_height="48dp"
                 android:layout_marginHorizontal="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_clock"
+                android:src="@drawable/ic_music"
                 app:tint="@color/text_secondary"
-                android:contentDescription="Voice Message"/>
-
+                android:contentDescription="Music" />
             <ImageButton
                 android:id="@+id/buttonSend"
                 android:layout_width="48dp"
@@ -100,7 +122,7 @@
                 android:background="@drawable/bg_button_primary"
                 android:src="@drawable/ic_arrow_forward"
                 app:tint="@color/pure_white"
-                android:contentDescription="Send Message"/>
+                android:contentDescription="Send Message" />
         </LinearLayout>
     </LinearLayout>
-</RelativeLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

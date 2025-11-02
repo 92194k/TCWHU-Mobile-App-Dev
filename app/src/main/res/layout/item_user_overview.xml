@@ -11,103 +11,96 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
 
+        <!-- Avatar -->
+        <TextView
+            android:id="@+id/textAvatar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:textSize="24sp"
+            android:background="@drawable/bg_avatar_preview_circle"
+            android:textColor="@color/pure_white"
+            tools:text="😎"/>
+
+        <!-- User Info -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp">
 
-            <!-- Avatar -->
-            <FrameLayout
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@drawable/bg_avatar_preview_circle">
-                <TextView
-                    android:id="@+id/textAvatar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:textSize="24sp"
-                    tools:text="😀" />
-            </FrameLayout>
-
-            <!-- Nickname & ID -->
-            <LinearLayout
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/textNickname"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:orientation="vertical">
-                <TextView
-                    android:id="@+id/textNickname"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    tools:text="BlueDragon" />
-                <TextView
-                    android:id="@+id/textStudentNumber"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    tools:text="2024-54321" />
-            </LinearLayout>
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="BlueDragon"/>
 
-            <!-- Status Badge (will be set dynamically) -->
+            <TextView
+                android:id="@+id/textStudentNumber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                tools:text="2023-12345"/>
+
             <TextView
                 android:id="@+id/textStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="4dp"
-                android:background="@drawable/bg_icon_amber"
-                android:textColor="@color/deep_purple"
-                android:textSize="10sp"
+                android:textColor="#388E3C"
+                android:textSize="12sp"
                 android:textStyle="bold"
-                tools:text="VERIFIED" />
+                android:layout_marginTop="4dp"
+                tools:text="VERIFIED"/>
         </LinearLayout>
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="12dp"
-            android:background="#f0f0f0"/>
-
-        <!-- Action Buttons -->
+        <!-- Buttons (Right Side) -->
         <LinearLayout
-            android:id="@+id/actionContainer"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:orientation="vertical"
+            android:gravity="end">
 
-            <!-- Dynamic Action Button (Ban/Unsuspend/Unban) -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/buttonDynamicAction"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                app:cornerRadius="12dp"
-                tools:text="Ban" />
+                android:id="@+id/buttonSuspendAction"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="12dp"
+                android:textSize="11sp"
+                tools:text="SUSPEND"
+                tools:icon="@drawable/ic_clock"/>
 
-            <!-- Delete Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonBanReviewAction"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginTop="4dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="12dp"
+                android:textSize="11sp"
+                tools:text="BAN"
+                app:icon="@drawable/ic_ban"/>
+
             <ImageButton
                 android:id="@+id/buttonDelete"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="8dp"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginTop="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Delete User"
                 android:src="@drawable/ic_trash"
-                app:tint="#D32F2F"
-                android:contentDescription="Delete Account" />
+                app:tint="#B71C1C"/>
         </LinearLayout>
-
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

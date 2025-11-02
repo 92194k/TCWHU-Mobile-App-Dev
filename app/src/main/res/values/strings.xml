@@ -9,9 +9,9 @@
     <string name="nickname_display_name">Nickname (Display Name)</string>
     <string name="year_level">Year Level</string>
     <string name="interests_comma_separated">Interests (comma separated)</string>
-    <string name="privacy_agreement_checkbox">I agree to the privacy rules and guidelines.</string>
+    <string name="privacy_agreement_part_1">I agree to the </string>
+    <string name="privacy_agreement_part_2">Privacy Rules and Guidelines.</string>
     <string name="continue_to_upload_photos">Continue to Upload Photos</string>
-
     <string name="icon_description_warning">Warning Icon</string>
 
     <string name="signup_student_number_guide">e.g., 2023-00001 (For verification only)</string>
@@ -20,10 +20,67 @@
     <string name="signup_interests_guide">e.g., Gaming, Sports, Studies</string>
     <string name="signup_nickname_warning">⚠️ Do NOT use your real name!</string>
     <string name="next_step_warning">🔒 Next Step: You will upload verification photos.</string>
-
-
     <string name="photo_upload_selfie_guide">Must be a clear, recent photo of your face. No filters, hats, or sunglasses.</string>
     <string name="photo_upload_id_guide">Upload a clear photo of the front of your valid TCU ID.</string>
 
+    <string name="title_activity_privacy_policy">Privacy Policy &amp; Rules</string>
 
+    <string name="privacy_policy_title">TCWHU Mobile App\nPrivacy Policy and Community Guidelines</string>
+
+    <string name="privacy_policy_body"><![CDATA[
+        <i>Effective Date: November 2, 2025</i>
+        <br><br>
+        Welcome to the TCWHU Mobile App.
+        Your privacy, anonymity, and safety are our top priorities.
+        By creating an account or using this application, you acknowledge that you have read, understood, and agreed to the following terms and conditions.
+        <br><br>
+        <b>1. Anonymity and Personal Information</b>
+        <br><br>
+        To protect your safety and maintain a respectful environment, all users must remain anonymous within the platform.
+        <br>
+        You <b>MUST NOT</b> use your real name as your display name or nickname.
+        You <b>MUST NOT</b> share personal identifying information in your profile, chats, or any public spaces within the app.
+        Prohibited information includes:
+        <br><br>
+        &nbsp;&nbsp;&nbsp;- Full name or surname
+        <br>
+        &nbsp;&nbsp;&nbsp;- Phone number, address, or email
+        <br>
+        &nbsp;&nbsp;&nbsp;- Class schedules or course sections
+        <br>
+        &nbsp;&nbsp;&nbsp;- Personal social media accounts
+        <br><br>
+        <b>2. Photo Verification (Administrator Access Only)</b>
+        <br><br>
+        During sign-up, you must upload a selfie and your TCU ID for verification.
+        These images are securely stored and accessible only to TCWHU administrators.
+        Your visible profile avatar must be a non-identifiable emoji or cartoon image.
+        <br><br>
+        <b>3. Safe and Respectful Communication</b>
+        <br><br>
+        Be respectful in all interactions. Avoid harassment, bullying, hate speech, or explicit content.
+        Use the “Report” feature to flag inappropriate behavior.
+        <br><br>
+        <b>4. Account Violations and Enforcement</b>
+        <br><br>
+        Admins may issue:
+        <br>
+        &nbsp;&nbsp;&nbsp;- Warnings
+        <br>
+        &nbsp;&nbsp;&nbsp;- Suspensions
+        <br>
+        &nbsp;&nbsp;&nbsp;- Permanent bans
+        <br>
+        based on rule violations.
+        <br><br>
+        <b>5. Data Privacy and Security</b>
+        <br><br>
+        Your data is stored securely and never shared or sold.
+        You can request account or data deletion anytime.
+        <br><br>
+        <b>6. Agreement and Compliance</b>
+        <br><br>
+        By checking “I Agree,” you confirm you understand and accept these terms.
+        Together, we maintain a safe, respectful, and anonymous community.
+    ]]></string>
 </resources>

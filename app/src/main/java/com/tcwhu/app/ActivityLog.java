@@ -1,17 +1,17 @@
 package com.tcwhu.app;
 
 import com.google.firebase.firestore.Exclude;
+import java.io.Serializable; // <-- IMPORT ADDED
 
-public class ActivityLog {
-    @Exclude private String id; // To hold the Firestore document ID
-
+// Implement Serializable to allow passing this object between activities
+public class ActivityLog implements Serializable {
+    @Exclude private String id;
     private String adminId;
     private String action;
-    private String targetId; // The user ID, event ID, or report ID acted upon
+    private String targetId;
     private long timestamp;
 
-    // Required empty constructor for Firestore
-    public ActivityLog() {}
+    public ActivityLog() {} // Required for Firestore
 
     // --- Getters ---
     public String getId() { return id; }
@@ -20,6 +20,6 @@ public class ActivityLog {
     public String getTargetId() { return targetId; }
     public long getTimestamp() { return timestamp; }
 
-    // --- Setter for the ID ---
+    // --- Setters ---
     public void setId(String id) { this.id = id; }
 }

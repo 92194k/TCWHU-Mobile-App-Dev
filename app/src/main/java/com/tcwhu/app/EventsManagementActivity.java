@@ -3,29 +3,32 @@ package com.tcwhu.app;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
 import com.cloudinary.android.MediaManager;
 import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -49,7 +52,6 @@ public class EventsManagementActivity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> imagePickerLauncher;
     private ImageView dialogImagePreview = null;
     private AlertDialog currentDialog = null;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,10 +113,10 @@ public class EventsManagementActivity extends AppCompatActivity {
                         eventList.clear();
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             Event event = document.toObject(Event.class);
+                            // ✅ Make sure Firestore ID is set
                             event.setId(document.getId());
                             eventList.add(event);
                         }
-                        // --- CRITICAL FIX: Explicitly notify the adapter --- ✅
                         adapter.notifyDataSetChanged();
                         checkIfEmpty();
                     } else {
@@ -137,9 +139,9 @@ public class EventsManagementActivity extends AppCompatActivity {
         TextInputEditText inputDate = dialogView.findViewById(R.id.inputEventDate);
         TextInputEditText inputPostedBy = dialogView.findViewById(R.id.inputPostedBy);
         dialogImagePreview = dialogView.findViewById(R.id.imageEventPreview);
-        Button buttonUploadEventImage = dialogView.findViewById(R.id.buttonUploadEventImage);
+        MaterialButton buttonUploadEventImage = dialogView.findViewById(R.id.buttonUploadEventImage);
 
-        // 1. DATE PICKER SETUP (Unchanged)
+        // DATE PICKER
         MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker().build();
         datePicker.addOnPositiveButtonClickListener(selection -> {
             TimeZone timeZoneUTC = TimeZone.getDefault();
@@ -149,16 +151,14 @@ public class EventsManagementActivity extends AppCompatActivity {
         });
         inputDate.setOnClickListener(v -> datePicker.show(getSupportFragmentManager(), "DATE_PICKER"));
 
-
-        // 2. IMAGE UPLOAD SETUP
+        // IMAGE SELECT
         buttonUploadEventImage.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_PICK);
             intent.setType("image/*");
             imagePickerLauncher.launch(intent);
         });
 
-
-        // 3. DIALOG CREATION
+        // DIALOG
         currentDialog = builder.setPositiveButton("Create", null)
                 .setNegativeButton("Cancel", (dialogInterface, i) -> dialogInterface.dismiss())
                 .create();
@@ -188,7 +188,6 @@ public class EventsManagementActivity extends AppCompatActivity {
         currentDialog.show();
     }
 
-
     private void uploadEventImage(Uri imageUri, String title, String desc, String postedBy) {
         String uniqueId = UUID.randomUUID().toString();
         String publicId = "event_photos/" + uniqueId;
@@ -208,7 +207,8 @@ public class EventsManagementActivity extends AppCompatActivity {
 
                     @Override
                     public void onError(String requestId, ErrorInfo error) {
-                        if (currentDialog != null) currentDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                        if (currentDialog != null)
+                            currentDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
                         Toast.makeText(EventsManagementActivity.this, "Image upload failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
                     }
 
@@ -217,7 +217,6 @@ public class EventsManagementActivity extends AppCompatActivity {
                     @Override public void onReschedule(String requestId, ErrorInfo error) {}
                 }).dispatch();
     }
-
 
     private void addEventToFirestore(String title, String desc, String postedBy, String imageUrl) {
         Map<String, Object> newEvent = new HashMap<>();
@@ -228,13 +227,42 @@ public class EventsManagementActivity extends AppCompatActivity {
         newEvent.put("imageUrl", imageUrl);
 
         db.collection("events").add(newEvent)
-                .addOnSuccessListener(documentReference -> {
-                    // The dialog is dismissed and loadEvents() is called in onResume, ensuring the list updates.
-                })
+                .addOnSuccessListener(documentReference -> loadEvents()) // refresh
                 .addOnFailureListener(e -> Toast.makeText(this, "Error saving event to database.", Toast.LENGTH_SHORT).show());
     }
 
-    private void showDeleteConfirmationDialog(Event event) { /* ... unchanged ... */ }
-    private void deleteEvent(Event event) { /* ... unchanged ... */ }
-    private void checkIfEmpty() { /* ... unchanged ... */ }
+    private void showDeleteConfirmationDialog(Event event) {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Event")
+                .setMessage("Are you sure you want to delete this event?")
+                .setPositiveButton("Yes", (dialog, which) -> deleteEvent(event))
+                .setNegativeButton("No", null)
+                .show();
+    }
+
+    private void deleteEvent(Event event) {
+        if (event.getId() == null || event.getId().isEmpty()) {
+            Toast.makeText(this, "Cannot delete event (missing ID).", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("events").document(event.getId())
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Event deleted successfully", Toast.LENGTH_SHORT).show();
+                    loadEvents(); // ✅ always refresh list
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed to delete event: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    private void checkIfEmpty() {
+        if (eventList.isEmpty()) {
+            emptyView.setVisibility(View.VISIBLE);
+            recyclerView.setVisibility(View.GONE);
+        } else {
+            emptyView.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
+        }
+    }
 }
