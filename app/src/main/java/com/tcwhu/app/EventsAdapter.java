@@ -8,9 +8,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.resource.bitmap.CenterCrop; // CRITICAL IMPORT
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners; // CRITICAL IMPORT
-import com.bumptech.glide.request.RequestOptions; // CRITICAL IMPORT
+import com.bumptech.glide.load.resource.bitmap.CenterCrop;
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
+import com.bumptech.glide.request.RequestOptions;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -18,10 +18,18 @@ import java.util.Locale;
 
 public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.EventViewHolder> {
 
-    private List<Event> eventList;
+    // --- ADDED: Interface for click listener ---
+    public interface OnEventClickListener {
+        void onEventClick(Event event);
+    }
 
-    public EventsAdapter(List<Event> eventList) {
+    private List<Event> eventList;
+    private OnEventClickListener clickListener; // ADDED
+
+    // --- UPDATED: Constructor now accepts the listener ---
+    public EventsAdapter(List<Event> eventList, OnEventClickListener clickListener) {
         this.eventList = eventList;
+        this.clickListener = clickListener;
     }
 
     @NonNull
@@ -34,7 +42,7 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.EventViewH
     @Override
     public void onBindViewHolder(@NonNull EventViewHolder holder, int position) {
         Event event = eventList.get(position);
-        holder.bind(event);
+        holder.bind(event, clickListener); // Pass listener to bind
     }
 
     @Override
@@ -55,30 +63,31 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.EventViewH
             eventPostedByTextView = itemView.findViewById(R.id.eventPostedByTextView);
         }
 
-        public void bind(Event event) {
+        // --- UPDATED: Bind method now handles click ---
+        public void bind(final Event event, final OnEventClickListener clickListener) {
             eventTitleTextView.setText(event.getTitle());
             eventDescriptionTextView.setText(event.getDescription());
             eventPostedByTextView.setText("Posted by " + event.getPostedBy());
 
-            // Format the date
             SimpleDateFormat formatter = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.US);
             String formattedDate = formatter.format(new Date(event.getDate()));
             eventDateTextView.setText(formattedDate);
 
-            // --- CRITICAL FIX: Load image with CenterCrop and Rounding --- ✅
             if (event.getImageUrl() != null && !event.getImageUrl().isEmpty()) {
-
-                // Define Glide options for scaling and corner radius (16dp to match the card view)
                 RequestOptions requestOptions = new RequestOptions().transform(
                         new CenterCrop(),
                         new RoundedCorners(16)
                 );
-
                 Glide.with(itemView.getContext())
                         .load(event.getImageUrl())
                         .apply(requestOptions)
                         .into(eventImageView);
+            } else {
+                eventImageView.setImageDrawable(null);
             }
+
+            // --- ADDED: Set the click listener on the entire card ---
+            itemView.setOnClickListener(v -> clickListener.onEventClick(event));
         }
     }
 }

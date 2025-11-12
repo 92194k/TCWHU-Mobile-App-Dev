@@ -14,7 +14,8 @@
     <string name="continue_to_upload_photos">Continue to Upload Photos</string>
     <string name="icon_description_warning">Warning Icon</string>
 
-    <string name="signup_student_number_guide">e.g., 2023-00001 (For verification only)</string>
+    <string name="signup_student_number_guide">e.g., 23-00001 (For verification only)</string>
+
     <string name="signup_password_guide">Must be at least 6 characters.</string>
     <string name="signup_year_level_guide">Note: Can only be changed once per year.</string>
     <string name="signup_interests_guide">e.g., Gaming, Sports, Studies</string>
@@ -24,9 +25,7 @@
     <string name="photo_upload_id_guide">Upload a clear photo of the front of your valid TCU ID.</string>
 
     <string name="title_activity_privacy_policy">Privacy Policy &amp; Rules</string>
-
     <string name="privacy_policy_title">TCWHU Mobile App\nPrivacy Policy and Community Guidelines</string>
-
     <string name="privacy_policy_body"><![CDATA[
         <i>Effective Date: November 2, 2025</i>
         <br><br>

@@ -1,8 +1,12 @@
 package com.tcwhu.app;
 
+import android.content.ContentResolver;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -10,21 +14,26 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.canhub.cropper.CropImage;
+import com.canhub.cropper.CropImageContract;
+import com.canhub.cropper.CropImageContractOptions;
+import com.canhub.cropper.CropImageOptions;
+import com.canhub.cropper.CropImageView;
 import com.cloudinary.android.MediaManager;
 import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -37,21 +46,26 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
 
-public class EventsManagementActivity extends AppCompatActivity {
+public class EventsManagementActivity extends AppCompatActivity implements EventsManagementAdapter.OnEventActionListener {
 
     private RecyclerView recyclerView;
     private EventsManagementAdapter adapter;
     private List<Event> eventList;
     private FirebaseFirestore db;
     private TextView emptyView;
+    private FloatingActionButton fabAddEvent;
+
+    private static final long MAX_FILE_SIZE_MB = 25;
+    private static final long MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
     private long selectedDateMillis = 0;
     private Uri selectedImageUri = null;
-    private String uploadedImageUrl = null;
-
-    private ActivityResultLauncher<Intent> imagePickerLauncher;
     private ImageView dialogImagePreview = null;
     private AlertDialog currentDialog = null;
+
+    // --- Correct CropImage launcher for CanHub 4.x ---
+    private final ActivityResultLauncher<CropImageContractOptions> cropImageLauncher =
+            registerForActivityResult(new CropImageContract(), this::handleCropImageResult);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,7 +75,7 @@ public class EventsManagementActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         recyclerView = findViewById(R.id.eventsRecyclerView);
         emptyView = findViewById(R.id.emptyView);
-        FloatingActionButton fabAddEvent = findViewById(R.id.fabAddEvent);
+        fabAddEvent = findViewById(R.id.fabAddEvent);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -71,24 +85,6 @@ public class EventsManagementActivity extends AppCompatActivity {
         setupRecyclerView();
 
         fabAddEvent.setOnClickListener(v -> showAddEventDialog());
-
-        imagePickerLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        selectedImageUri = result.getData().getData();
-                        if (dialogImagePreview != null && selectedImageUri != null) {
-                            dialogImagePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                            dialogImagePreview.setPadding(0, 0, 0, 0);
-                            Glide.with(this).load(selectedImageUri).into(dialogImagePreview);
-
-                            if (currentDialog != null) {
-                                currentDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
-                            }
-                        }
-                    }
-                }
-        );
     }
 
     @Override
@@ -99,9 +95,21 @@ public class EventsManagementActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         eventList = new ArrayList<>();
-        adapter = new EventsManagementAdapter(eventList, this::showDeleteConfirmationDialog);
+        adapter = new EventsManagementAdapter(eventList, this);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
+
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                if (dy > 0 && fabAddEvent.isShown()) {
+                    fabAddEvent.hide();
+                } else if (dy < 0 && !fabAddEvent.isShown()) {
+                    fabAddEvent.show();
+                }
+            }
+        });
     }
 
     private void loadEvents() {
@@ -113,7 +121,6 @@ public class EventsManagementActivity extends AppCompatActivity {
                         eventList.clear();
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             Event event = document.toObject(Event.class);
-                            // ✅ Make sure Firestore ID is set
                             event.setId(document.getId());
                             eventList.add(event);
                         }
@@ -130,7 +137,6 @@ public class EventsManagementActivity extends AppCompatActivity {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_event, null);
         builder.setView(dialogView);
 
-        uploadedImageUrl = null;
         selectedImageUri = null;
         selectedDateMillis = 0;
 
@@ -148,17 +154,26 @@ public class EventsManagementActivity extends AppCompatActivity {
             int offsetFromUTC = timeZoneUTC.getOffset(new Date().getTime()) * -1;
             selectedDateMillis = selection + offsetFromUTC;
             inputDate.setText(datePicker.getHeaderText());
+            inputDate.setError(null);
         });
         inputDate.setOnClickListener(v -> datePicker.show(getSupportFragmentManager(), "DATE_PICKER"));
 
-        // IMAGE SELECT
+        // IMAGE CROPPER
         buttonUploadEventImage.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_PICK);
-            intent.setType("image/*");
-            imagePickerLauncher.launch(intent);
+            CropImageOptions cropOptions = new CropImageOptions();
+            cropOptions.guidelines = CropImageView.Guidelines.ON;
+            cropOptions.aspectRatioX = 16;
+            cropOptions.aspectRatioY = 9;
+            cropOptions.fixAspectRatio = true;
+            cropOptions.showCropOverlay = true;
+            cropOptions.allowRotation = true;
+            cropOptions.activityTitle = "Crop Event Photo";
+            cropOptions.activityMenuIconColor = getResources().getColor(R.color.white);
+
+            CropImageContractOptions contractOptions = new CropImageContractOptions(null, cropOptions);
+            cropImageLauncher.launch(contractOptions);
         });
 
-        // DIALOG
         currentDialog = builder.setPositiveButton("Create", null)
                 .setNegativeButton("Cancel", (dialogInterface, i) -> dialogInterface.dismiss())
                 .create();
@@ -170,13 +185,17 @@ public class EventsManagementActivity extends AppCompatActivity {
                 String desc = inputDesc.getText().toString().trim();
                 String postedBy = inputPostedBy.getText().toString().trim();
 
-                if (title.isEmpty() || desc.isEmpty() || selectedDateMillis == 0 || postedBy.isEmpty()) {
-                    Toast.makeText(this, "Please fill all required fields.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+                boolean isValid = true;
+                if (title.isEmpty()) { inputTitle.setError("Title is required"); isValid=false; } else inputTitle.setError(null);
+                if (desc.isEmpty()) { inputDesc.setError("Description is required"); isValid=false; } else inputDesc.setError(null);
+                if (selectedDateMillis == 0) { inputDate.setError("Date is required"); isValid=false; } else inputDate.setError(null);
+                if (postedBy.isEmpty()) { inputPostedBy.setError("Posted By is required"); isValid=false; } else inputPostedBy.setError(null);
+
+                if (!isValid) return;
 
                 if (selectedImageUri != null) {
                     positiveButton.setEnabled(false);
+                    positiveButton.setText("Uploading...");
                     uploadEventImage(selectedImageUri, title, desc, postedBy);
                 } else {
                     addEventToFirestore(title, desc, postedBy, null);
@@ -188,6 +207,40 @@ public class EventsManagementActivity extends AppCompatActivity {
         currentDialog.show();
     }
 
+    private void handleCropImageResult(CropImageView.CropResult result) {
+        if (result.isSuccessful()) {
+            selectedImageUri = result.getUriContent();
+            if (selectedImageUri == null) {
+                Toast.makeText(this, "Failed to get cropped image", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (getFileSize(selectedImageUri) > MAX_FILE_SIZE_BYTES) {
+                Toast.makeText(this, "Image is too large. Max " + MAX_FILE_SIZE_MB + "MB.", Toast.LENGTH_LONG).show();
+                selectedImageUri = null;
+                return;
+            }
+            if (dialogImagePreview != null) {
+                dialogImagePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                dialogImagePreview.setPadding(0,0,0,0);
+                Glide.with(this).load(selectedImageUri).into(dialogImagePreview);
+                if (currentDialog != null)
+                    currentDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+            }
+        } else if (result.getError() != null) {
+            Toast.makeText(this, "Cropping failed: " + result.getError().getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private long getFileSize(Uri uri) {
+        try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+                if (!cursor.isNull(sizeIndex)) return cursor.getLong(sizeIndex);
+            }
+        } catch (Exception e) { Log.e("EventsManagement", "Error getting file size", e); }
+        return -1;
+    }
+
     private void uploadEventImage(Uri imageUri, String title, String desc, String postedBy) {
         String uniqueId = UUID.randomUUID().toString();
         String publicId = "event_photos/" + uniqueId;
@@ -197,21 +250,17 @@ public class EventsManagementActivity extends AppCompatActivity {
         MediaManager.get().upload(imageUri)
                 .option("public_id", publicId)
                 .callback(new UploadCallback() {
-                    @Override
-                    public void onSuccess(String requestId, Map resultData) {
+                    @Override public void onSuccess(String requestId, Map resultData) {
                         String url = (String) resultData.get("secure_url");
                         addEventToFirestore(title, desc, postedBy, url);
                         if (currentDialog != null) currentDialog.dismiss();
                         Toast.makeText(EventsManagementActivity.this, "Event created successfully!", Toast.LENGTH_LONG).show();
                     }
-
-                    @Override
-                    public void onError(String requestId, ErrorInfo error) {
+                    @Override public void onError(String requestId, ErrorInfo error) {
                         if (currentDialog != null)
                             currentDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
                         Toast.makeText(EventsManagementActivity.this, "Image upload failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
                     }
-
                     @Override public void onStart(String requestId) {}
                     @Override public void onProgress(String requestId, long bytes, long totalBytes) {}
                     @Override public void onReschedule(String requestId, ErrorInfo error) {}
@@ -227,8 +276,8 @@ public class EventsManagementActivity extends AppCompatActivity {
         newEvent.put("imageUrl", imageUrl);
 
         db.collection("events").add(newEvent)
-                .addOnSuccessListener(documentReference -> loadEvents()) // refresh
-                .addOnFailureListener(e -> Toast.makeText(this, "Error saving event to database.", Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(doc -> loadEvents())
+                .addOnFailureListener(e -> Toast.makeText(this, "Error saving event.", Toast.LENGTH_SHORT).show());
     }
 
     private void showDeleteConfirmationDialog(Event event) {
@@ -245,15 +294,13 @@ public class EventsManagementActivity extends AppCompatActivity {
             Toast.makeText(this, "Cannot delete event (missing ID).", Toast.LENGTH_SHORT).show();
             return;
         }
-
         db.collection("events").document(event.getId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Event deleted successfully", Toast.LENGTH_SHORT).show();
-                    loadEvents(); // ✅ always refresh list
+                    loadEvents();
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to delete event: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete event: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     private void checkIfEmpty() {
@@ -264,5 +311,17 @@ public class EventsManagementActivity extends AppCompatActivity {
             emptyView.setVisibility(View.GONE);
             recyclerView.setVisibility(View.VISIBLE);
         }
+    }
+
+    @Override
+    public void onEventClick(Event event) {
+        Intent intent = new Intent(this, EventDetailActivity.class);
+        intent.putExtra(EventDetailActivity.EXTRA_EVENT, event);
+        startActivity(intent);
+    }
+
+    @Override
+    public void onDelete(Event event) {
+        showDeleteConfirmationDialog(event);
     }
 }

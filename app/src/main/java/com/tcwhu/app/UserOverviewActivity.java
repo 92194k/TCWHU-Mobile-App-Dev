@@ -60,9 +60,8 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         filteredStudentList = new ArrayList<>();
 
         setupRecyclerView();
-        setupFilterSpinner();
+        setupFilterSpinner(); // <-- UPDATED
         setupSearchListener();
-        loadAllStudents();
     }
 
     @Override
@@ -78,17 +77,18 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
     }
 
     private void setupFilterSpinner() {
-        String[] filters = new String[]{"All Users", "Verified Only", "Pending Only", "Suspended Only", "Banned Only"};
+        // --- ADDED NEW FILTER ---
+        String[] filters = new String[]{"All Users", "Verified Only", "Pending Only", "Suspended Only", "Banned Only", "Deletion Requests"};
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, filters);
         spinnerFilter.setAdapter(spinnerAdapter);
 
         spinnerFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                // "Deletion Requests" becomes "deletion"
                 currentFilter = parent.getItemAtPosition(position).toString().toLowerCase().split(" ")[0];
                 applyFilters();
             }
-
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}
         });
@@ -111,6 +111,7 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
                     if (task.isSuccessful()) {
                         allStudentList.clear();
                         for (QueryDocumentSnapshot document : task.getResult()) {
+                            // This uses the new fixed Student.java
                             Student student = document.toObject(Student.class);
                             student.setUserId(document.getId());
                             allStudentList.add(student);
@@ -133,12 +134,14 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
                     boolean isVerified = student.isVerified();
                     boolean isBanned = student.isBanned();
                     boolean isSuspended = student.isSuspended();
+                    boolean isDeletionRequested = student.isDeletionRequested(); // <-- ADDED
 
                     switch (currentFilter) {
                         case "verified": return isVerified && !isBanned && !isSuspended;
                         case "pending": return !isVerified && !isBanned && !isSuspended;
                         case "suspended": return isSuspended;
                         case "banned": return isBanned;
+                        case "deletion": return isDeletionRequested; // <-- ADDED
                         case "all":
                         default: return true;
                     }
@@ -156,9 +159,15 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
     }
 
     // --- ACTION HANDLERS ---
+
+    @Override
+    public void onSuspend(String userId) {
+        showConfirmationDialog("Suspend User", "Suspend user for 7 days?", userId, "suspend");
+    }
+
     @Override
     public void onBan(String userId) {
-        showConfirmationDialog("Ban User", "Are you sure you want to permanently ban this user?", userId, "ban");
+        showConfirmationDialog("Ban User", "Ban user? Account will be deleted in 30 days.", userId, "ban");
     }
 
     @Override
@@ -173,7 +182,8 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
 
     @Override
     public void onDelete(String userId) {
-        showConfirmationDialog("Delete Account", "This action will permanently remove this user. Continue?", userId, "delete");
+        // This is now "Approve Deletion" or "Force Delete"
+        showConfirmationDialog("Approve Deletion", "This will permanently remove this user's data and account immediately. Continue?", userId, "delete");
     }
 
     @Override
@@ -182,6 +192,13 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         intent.putExtra("studentId", student.getUserId());
         startActivity(intent);
     }
+
+    // --- ADDED: Handle the "Deny" button click ---
+    @Override
+    public void onDenyDeletion(String userId) {
+        showConfirmationDialog("Deny Request", "Deny this user's account deletion request?", userId, "deny_deletion");
+    }
+
 
     private void showConfirmationDialog(String title, String message, String userId, String action) {
         new AlertDialog.Builder(this)
@@ -194,6 +211,7 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
 
     private void executeUserAction(String userId, String action) {
         if ("delete".equals(action)) {
+            // This triggers your "deleteUserAccount" Cloud Function
             db.collection("users").document(userId).delete()
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(this, "User deleted.", Toast.LENGTH_SHORT).show();
@@ -203,23 +221,38 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         }
 
         Map<String, Object> updates = new HashMap<>();
+        long now = System.currentTimeMillis();
 
         switch (action) {
+            case "suspend":
+                long suspendTime = 7 * 24 * 60 * 60 * 1000L;
+                updates.put("isSuspended", true);
+                updates.put("suspendEndDate", now + suspendTime);
+                break;
             case "ban":
+                long banTime = 30 * 24 * 60 * 60 * 1000L;
                 updates.put("isBanned", true);
                 updates.put("isSuspended", false);
+                updates.put("deletionDate", now + banTime);
                 break;
             case "unsuspend":
                 updates.put("isSuspended", false);
+                updates.put("suspendEndDate", 0L);
                 break;
             case "unban":
                 updates.put("isBanned", false);
+                updates.put("deletionDate", 0L);
+                break;
+            // --- ADDED: The "Deny" action ---
+            case "deny_deletion":
+                updates.put("isDeletionRequested", false);
+                updates.put("deletionReason", null); // Optional: clear the reason
                 break;
         }
 
         db.collection("users").document(userId).update(updates)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "User " + action + "ed successfully.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "User " + action + " successfully.", Toast.LENGTH_SHORT).show();
                     loadAllStudents();
                 })
                 .addOnFailureListener(e ->

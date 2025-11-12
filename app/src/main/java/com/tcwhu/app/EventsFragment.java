@@ -1,5 +1,6 @@
 package com.tcwhu.app;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,24 +12,25 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.firebase.firestore.FirebaseFirestore; // CRITICAL IMPORT
-import com.google.firebase.firestore.Query; // CRITICAL IMPORT
-import com.google.firebase.firestore.QueryDocumentSnapshot; // CRITICAL IMPORT
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
-public class EventsFragment extends Fragment {
+// --- IMPLEMENT THE NEW INTERFACE ---
+public class EventsFragment extends Fragment implements EventsAdapter.OnEventClickListener {
 
     private RecyclerView eventsRecyclerView;
     private EventsAdapter eventsAdapter;
     private List<Event> eventList;
     private TextView emptyView;
-    private FirebaseFirestore db; // CRITICAL: Database instance
+    private FirebaseFirestore db;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        db = FirebaseFirestore.getInstance(); // Initialize Firestore
+        db = FirebaseFirestore.getInstance();
     }
 
     @Nullable
@@ -44,7 +46,6 @@ public class EventsFragment extends Fragment {
         return view;
     }
 
-    // --- CRITICAL FIX: Load data in onResume to guarantee synchronization --- ✅
     @Override
     public void onResume() {
         super.onResume();
@@ -53,13 +54,13 @@ public class EventsFragment extends Fragment {
 
     private void setupRecyclerView() {
         eventList = new ArrayList<>();
-        eventsAdapter = new EventsAdapter(eventList);
+        // --- UPDATED: Pass 'this' as the click listener ---
+        eventsAdapter = new EventsAdapter(eventList, this);
         eventsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         eventsRecyclerView.setAdapter(eventsAdapter);
     }
 
     private void loadEventsFromFirestore() {
-        // Fetch all events from the 'events' collection, sorted by date
         db.collection("events")
                 .orderBy("date", Query.Direction.DESCENDING)
                 .get()
@@ -69,6 +70,7 @@ public class EventsFragment extends Fragment {
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             Event event = document.toObject(Event.class);
                             if (event.getTitle() != null) {
+                                event.setId(document.getId()); // Set the ID
                                 eventList.add(event);
                             }
                         }
@@ -81,7 +83,6 @@ public class EventsFragment extends Fragment {
     }
 
     private void checkIfEmpty() {
-        // Safely check if views exist before manipulating them
         if (eventsRecyclerView == null || emptyView == null || getContext() == null) return;
 
         if (eventList.isEmpty()) {
@@ -91,5 +92,13 @@ public class EventsFragment extends Fragment {
             eventsRecyclerView.setVisibility(View.VISIBLE);
             emptyView.setVisibility(View.GONE);
         }
+    }
+
+    // --- ADDED: Implementation for the click listener ---
+    @Override
+    public void onEventClick(Event event) {
+        Intent intent = new Intent(getActivity(), EventDetailActivity.class);
+        intent.putExtra(EventDetailActivity.EXTRA_EVENT, event);
+        startActivity(intent);
     }
 }

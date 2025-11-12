@@ -7,31 +7,35 @@
     <color name="light_gray">#F5F5F5</color>
     <color name="soft_black">#1a1a1a</color>
     <color name="inactive_gray">#9CA3AF</color>
-    <color name="maroon">#800000</color> <color name="warning_bg">#FEF3F2</color>
+    <color name="maroon">#800000</color>
+    <color name="warning_bg">#FEF3F2</color>
     <color name="warning_text">#DC2626</color>
     <color name="warning_border">#FEE4E2</color>
 
+    <!-- Theme-aware colors (Light Mode) -->
     <color name="text_primary">@color/soft_black</color>
     <color name="text_secondary">@color/inactive_gray</color>
     <color name="text_on_primary">@color/pure_white</color>
+    <color name="background">@color/pure_white</color> <!-- CRITICAL FIX: ADDED THIS LINE -->
 
     <color name="error_red">#FF3B30</color>
-
     <color name="red_600">#E53935</color>
 
-        <!-- Primary App Colors -->
-        <color name="purple_200">#BB86FC</color>
-        <color name="purple_500">#6200EE</color>
-        <color name="purple_700">#3700B3</color>
-        <color name="teal_200">#03DAC5</color>
-        <color name="teal_700">#018786</color>
+    <!-- Primary App Colors -->
+    <color name="purple_200">#BB86FC</color>
+    <color name="purple_500">#6200EE</color>
+    <color name="purple_700">#3700B3</color>
+    <color name="teal_200">#03DAC5</color>
+    <color name="teal_700">#018786</color>
 
-        <!-- Basic Colors -->
-        <color name="black">#000000</color>
-        <color name="white">#FFFFFF</color>
-        <color name="darker_gray">#555555</color>
+    <!-- Basic Colors -->
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="darker_gray">#555555</color>
 
-        <!-- Optional Accent Colors -->
-        <color name="gray_light">#EEEEEE</color>
-    </resources>
+    <!-- Optional Accent Colors -->
+    <color name="gray_light">#EEEEEE</color>
 
+    <color name="suspended_orange">#F57C00</color>
+
+</resources>

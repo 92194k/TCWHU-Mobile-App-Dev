@@ -49,7 +49,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="NO Real Photos Allowed. You must choose a cartoon avatar or emoji."
+                    android:text="No Real Photos Allowed. You must choose a cartoon avatar or emoji."
                     android:textColor="#DC2626"
                     android:textSize="14sp" />
             </LinearLayout>
@@ -89,7 +89,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
-                            android:textSize="56sp"
+                            android:textSize="60sp"
                             tools:text="😀" />
                     </FrameLayout>
                 </LinearLayout>

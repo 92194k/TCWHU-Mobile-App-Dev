@@ -8,7 +8,6 @@
     android:orientation="vertical"
     tools:context=".StudentLoginActivity">
 
-    <!-- Toolbar -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
@@ -30,7 +29,6 @@
             android:orientation="vertical"
             android:padding="24dp">
 
-            <!-- Safety Reminder Box -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -53,7 +51,6 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- Student Number Input -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -68,11 +65,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:background="@drawable/bg_edittext"
-                android:hint="e.g., 2023-00001"
+                android:hint="e.g., 23-00001"
                 android:inputType="text"
                 android:padding="14dp" />
 
-            <!-- Password Input -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -99,7 +95,6 @@
                     android:padding="14dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Login Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonLogin"
                 style="@style/PrimaryButton"
@@ -109,7 +104,6 @@
                 android:text="Login"
                 app:cornerRadius="28dp" />
 
-            <!-- Forgot Password Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonForgotPassword"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -120,7 +114,6 @@
                 android:text="Forgot Password?"
                 android:textColor="@color/deep_purple" />
 
-            <!-- Sign Up Text -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -145,7 +138,6 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Footer Text -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

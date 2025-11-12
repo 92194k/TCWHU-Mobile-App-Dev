@@ -114,7 +114,7 @@ public class PhotoUploadActivity extends AppCompatActivity {
                         }
                         checkIfBothUploaded();
                         progressBar.setVisibility(View.GONE);
-                        Toast.makeText(PhotoUploadActivity.this, type + " photo uploaded!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(PhotoUploadActivity.this, type + " Photo uploaded!", Toast.LENGTH_SHORT).show();
                     }
                     @Override
                     public void onError(String requestId, ErrorInfo error) {

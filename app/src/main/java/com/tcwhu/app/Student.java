@@ -1,6 +1,7 @@
 package com.tcwhu.app;
 
 import com.google.firebase.firestore.Exclude;
+import com.google.firebase.firestore.PropertyName;
 import java.io.Serializable;
 import java.util.List;
 
@@ -12,17 +13,25 @@ public class Student implements Serializable {
     private String interests;
     private String avatar;
     private String email;
-    private boolean isVerified;
-    private boolean isBanned;
-    private boolean isSuspended;
     private long createdAt;
     private String selfiePhotoUrl;
     private String idPhotoUrl;
-    private List<String> blockedUsers; // <-- ADDED
+    private List<String> blockedUsers;
+    private long suspendEndDate;
+    private long deletionDate;
+    private String deletionReason;
 
-    public Student() {}
+    // --- CRITICAL FIX: Changed to Boolean to handle nulls from Firestore ---
+    private Boolean isVerified;
+    private Boolean isBanned;
+    private Boolean isSuspended;
+    private Boolean isDeletionRequested;
+    private Integer warningCount; // ADDED: To track warnings
+
+    public Student() {} // Required empty constructor
 
     // --- Getters ---
+    @Exclude
     public String getUserId() { return userId; }
     public String getStudentNumber() { return studentNumber; }
     public String getNickname() { return nickname; }
@@ -30,15 +39,62 @@ public class Student implements Serializable {
     public String getInterests() { return interests; }
     public String getAvatar() { return avatar; }
     public String getEmail() { return email; }
-    public boolean isVerified() { return isVerified; }
-    public boolean isBanned() { return isBanned; }
-    public boolean isSuspended() { return isSuspended; }
     public long getCreatedAt() { return createdAt; }
     public String getSelfiePhotoUrl() { return selfiePhotoUrl; }
     public String getIdPhotoUrl() { return idPhotoUrl; }
-    public List<String> getBlockedUsers() { return blockedUsers; } // <-- ADDED
+    public List<String> getBlockedUsers() { return blockedUsers; }
+    public long getSuspendEndDate() { return suspendEndDate; }
+    public long getDeletionDate() { return deletionDate; }
+    public String getDeletionReason() { return deletionReason; }
+    public Integer getWarningCount() { return warningCount != null ? warningCount : 0; } // Null-safe getter
 
-    // --- Setter ---
+    // --- CRITICAL FIX: Null-safe boolean getters ---
+    @PropertyName("isVerified")
+    public boolean isVerified() {
+        return isVerified != null && isVerified;
+    }
+
+    @PropertyName("isBanned")
+    public boolean isBanned() {
+        return isBanned != null && isBanned;
+    }
+
+    @PropertyName("isSuspended")
+    public boolean isSuspended() {
+        return isSuspended != null && isSuspended;
+    }
+
+    @PropertyName("isDeletionRequested")
+    public boolean isDeletionRequested() {
+        return isDeletionRequested != null && isDeletionRequested;
+    }
+
+    // --- Setters ---
     public void setUserId(String userId) { this.userId = userId; }
-    // (Other setters are handled by Firestore)
+    public void setStudentNumber(String studentNumber) { this.studentNumber = studentNumber; }
+    public void setNickname(String nickname) { this.nickname = nickname; }
+    public void setYearLevel(String yearLevel) { this.yearLevel = yearLevel; }
+    public void setInterests(String interests) { this.interests = interests; }
+    public void setAvatar(String avatar) { this.avatar = avatar; }
+    public void setEmail(String email) { this.email = email; }
+    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
+    public void setSelfiePhotoUrl(String selfiePhotoUrl) { this.selfiePhotoUrl = selfiePhotoUrl; }
+    public void setIdPhotoUrl(String idPhotoUrl) { this.idPhotoUrl = idPhotoUrl; }
+    public void setBlockedUsers(List<String> blockedUsers) { this.blockedUsers = blockedUsers; }
+    public void setSuspendEndDate(long suspendEndDate) { this.suspendEndDate = suspendEndDate; }
+    public void setDeletionDate(long deletionDate) { this.deletionDate = deletionDate; }
+    public void setDeletionReason(String deletionReason) { this.deletionReason = deletionReason; }
+    public void setWarningCount(Integer warningCount) { this.warningCount = warningCount; }
+
+    @PropertyName("isVerified")
+    public void setVerified(boolean verified) { isVerified = verified; }
+
+    @PropertyName("isBanned")
+    public void setBanned(boolean banned) { isBanned = banned; }
+
+    @PropertyName("isSuspended")
+    public void setSuspended(boolean suspended) { isSuspended = suspended; }
+
+    @PropertyName("isDeletionRequested")
+    public void setDeletionRequested(boolean deletionRequested) { isDeletionRequested = deletionRequested; }
 }

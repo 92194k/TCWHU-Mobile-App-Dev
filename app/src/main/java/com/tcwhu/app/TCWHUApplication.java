@@ -16,5 +16,8 @@ public class TCWHUApplication extends Application {
         config.put("api_key", "147481881754886");
         config.put("api_secret", "583Dz7vp2y6TRaDBuCj8HbHoQX4");
         MediaManager.init(this, config);
+
+        // --- CRITICAL FIX: APPLY THE SAVED THEME ON APP STARTUP ---
+        ThemeSwitcher.applyTheme(this);
     }
 }

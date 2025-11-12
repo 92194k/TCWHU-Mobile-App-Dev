@@ -1,12 +1,14 @@
 package com.tcwhu.app;
 
+import android.graphics.Typeface; // IMPORT ADDED
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
+import android.widget.LinearLayout; // IMPORT ADDED
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat; // IMPORT ADDED
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.auth.FirebaseAuth;
 import java.text.SimpleDateFormat;
@@ -42,14 +44,13 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         while (iterator.hasNext()) {
             Chat chat = iterator.next();
 
-            // --- CRITICAL FIX: Calls getUsers() ---
             if (chat.getUsers() == null || chat.getUsers().isEmpty()) {
                 iterator.remove();
                 continue;
             }
 
             String otherUserId = null;
-            for (String id : chat.getUsers()) { // --- CRITICAL FIX: Calls getUsers() ---
+            for (String id : chat.getUsers()) {
                 if (!id.equals(currentUserId)) {
                     otherUserId = id;
                     break;
@@ -74,7 +75,6 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Chat chat = chatList.get(position);
 
-        // --- CRITICAL FIX: Calls getUsers() ---
         if (chat.getUsers() == null || chat.getUsers().isEmpty()) {
             holder.itemView.setVisibility(View.GONE);
             holder.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
@@ -87,7 +87,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
         String otherUserId = null;
-        for (String id : chat.getUsers()) { // --- CRITICAL FIX: Calls getUsers() ---
+        for (String id : chat.getUsers()) {
             if (!id.equals(currentUserId)) {
                 otherUserId = id;
                 break;
@@ -95,7 +95,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         }
 
         Student otherUser = studentMap.get(otherUserId);
-        holder.bind(otherUser, chat, listener, otherUserId);
+        holder.bind(otherUser, chat, listener, otherUserId, currentUserId); // Pass currentUserId
     }
 
     @Override
@@ -117,7 +117,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         }
 
         public void bind(final Student otherUser, final Chat chat,
-                         final OnChatSelectedListener listener, final String otherUserId) {
+                         final OnChatSelectedListener listener, final String otherUserId, final String currentUserId) {
 
             if (otherUser != null) {
                 textNickname.setText(otherUser.getNickname() != null ? otherUser.getNickname() : "Unknown User");
@@ -129,6 +129,21 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
                     textTime.setText(formatter.format(new Date(chat.getTimestamp())));
                 } else {
                     textTime.setText("");
+                }
+
+                // --- CRITICAL FIX: Set BOLD for unread messages ---
+                if (chat.getLastSenderId() != null && !chat.getLastSenderId().equals(currentUserId) && !chat.isRead()) {
+                    // UNREAD: Make text bold and purple
+                    textNickname.setTypeface(null, Typeface.BOLD);
+                    textLastMessage.setTypeface(null, Typeface.BOLD);
+                    textTime.setTypeface(null, Typeface.BOLD);
+                    textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.deep_purple));
+                } else {
+                    // READ: Make text normal and gray
+                    textNickname.setTypeface(null, Typeface.NORMAL);
+                    textLastMessage.setTypeface(null, Typeface.NORMAL);
+                    textTime.setTypeface(null, Typeface.NORMAL);
+                    textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
                 }
 
                 itemView.setOnClickListener(v -> listener.onChatSelected(otherUserId));

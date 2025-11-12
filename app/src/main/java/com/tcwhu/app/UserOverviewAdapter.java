@@ -18,11 +18,13 @@ import java.util.List;
 public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapter.ViewHolder> {
 
     public interface OnActionListener {
+        void onSuspend(String userId);
         void onBan(String userId);
         void onUnsuspend(String userId);
         void onUnban(String userId);
-        void onDelete(String userId);
+        void onDelete(String userId); // This is now "Approve Deletion" or "Force Delete"
         void onReview(Student student);
+        void onDenyDeletion(String userId); // <-- ADDED
     }
 
     private List<Student> studentList;
@@ -69,12 +71,31 @@ public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapte
         public void bind(final Student student, final OnActionListener listener) {
             textAvatar.setText(student.getAvatar() != null ? student.getAvatar() : "👤");
             textNickname.setText(student.getNickname() != null ? student.getNickname() : "Unknown");
-            textStudentNumber.setText(student.getStudentNumber() != null ? student.getStudentNumber() : "N/A");
 
+            // Default state
             buttonSuspend.setVisibility(View.GONE);
             buttonBan.setVisibility(View.GONE);
+            buttonDelete.setImageTintList(ColorStateList.valueOf(Color.parseColor("#B71C1C"))); // Default red tint
+            textStudentNumber.setText(student.getStudentNumber() != null ? student.getStudentNumber() : "N/A");
 
-            if (student.isBanned()) {
+            // --- NEW LOGIC (HIGHEST PRIORITY) ---
+            if (student.isDeletionRequested()) {
+                setStatus("#D32F2F", "DELETION REQUEST");
+
+                // Show the reason
+                String studentNum = student.getStudentNumber() != null ? student.getStudentNumber() : "N/A";
+                String reason = student.getDeletionReason() != null ? student.getDeletionReason() : "No reason given.";
+                textStudentNumber.setText(studentNum + "\nReason: " + reason);
+
+                // Re-use "Suspend" button as "DENY"
+                configureButton(buttonSuspend, "DENY", Color.parseColor("#388E3C"), v -> listener.onDenyDeletion(student.getUserId()));
+                buttonSuspend.setVisibility(View.VISIBLE);
+
+                // The "Delete" button (trash can) now functions as "APPROVE"
+                // We'll add a green tint to show it's an "approve" action
+                buttonDelete.setImageTintList(ColorStateList.valueOf(Color.parseColor("#388E3C")));
+
+            } else if (student.isBanned()) {
                 setStatus("#B71C1C", "BANNED");
                 configureButton(buttonBan, "UNBAN", Color.parseColor("#388E3C"), v -> listener.onUnban(student.getUserId()));
                 buttonBan.setVisibility(View.VISIBLE);
@@ -90,13 +111,15 @@ public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapte
                 buttonBan.setVisibility(View.VISIBLE);
 
             } else {
+                // User is VERIFIED
                 setStatus("#388E3C", "VERIFIED");
-                configureButton(buttonSuspend, "SUSPEND", Color.parseColor("#F57C00"), v -> listener.onUnsuspend(student.getUserId()));
+                configureButton(buttonSuspend, "SUSPEND", Color.parseColor("#F57C00"), v -> listener.onSuspend(student.getUserId()));
                 configureButton(buttonBan, "BAN", Color.parseColor("#B71C1C"), v -> listener.onBan(student.getUserId()));
                 buttonSuspend.setVisibility(View.VISIBLE);
                 buttonBan.setVisibility(View.VISIBLE);
             }
 
+            // The "Delete" button click listener is always the same.
             buttonDelete.setOnClickListener(v -> listener.onDelete(student.getUserId()));
         }
 

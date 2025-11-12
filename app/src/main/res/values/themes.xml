@@ -1,28 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- ✅ Unified Day/Night Theme (Base + AppTheme merged) -->
+    <!-- Base App Theme (No Action Bar) -->
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Branding Colors -->
+        <!-- Brand Colors -->
         <item name="colorPrimary">@color/deep_purple</item>
-        <item name="colorPrimaryVariant">@color/deep_purple_dark</item>
-        <item name="colorOnPrimary">@color/text_on_primary</item>
-
-        <!-- Status & Navigation Bar -->
-        <item name="android:statusBarColor">@color/deep_purple</item>
-        <item name="android:navigationBarColor">@color/deep_purple_dark</item>
-
-        <!-- Translucency & Fullscreen -->
-        <item name="android:windowTranslucentNavigation">true</item>
-        <item name="android:windowTranslucentStatus">true</item>
-        <item name="android:windowFullscreen">true</item>
+        <item name="colorOnPrimary">@color/pure_white</item>
 
         <!-- Background & Text -->
-        <item name="android:windowBackground">@color/pure_white</item>
-        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="colorSurface">@color/background</item>
+        <item name="colorOnSurface">@color/text_primary</item>
 
-        <!-- Dark mode automatic adaptation -->
-        <item name="android:forceDarkAllowed">true</item>
+        <!-- Status Bar and Fullscreen -->
+        <item name="android:statusBarColor">@color/deep_purple</item>
+        <item name="android:windowFullscreen">true</item>
+
+        <!-- Default Text/Window Colors -->
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        <item name="android:textColorPrimary">?attr/colorOnSurface</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+    </style>
+
+    <!-- CRITICAL FIX: Add this new theme for the Image Cropper -->
+    <!-- This theme HAS an action bar, which is required for the "Done" button -->
+    <style name="AppTheme.ImageCropper" parent="Theme.Material3.DayNight">
+        <item name="colorPrimary">@color/deep_purple</item>
+        <item name="colorOnPrimary">@color/pure_white</item>
+        <item name="android:statusBarColor">@color/deep_purple</item>
+    </style>
+
+    <!-- Fullscreen theme for viewing photos -->
+    <style name="AppTheme.FullScreen" parent="AppTheme">
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
     </style>
 
 </resources>

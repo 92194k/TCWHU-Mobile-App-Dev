@@ -1,17 +1,22 @@
 package com.tcwhu.app;
 
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView; // IMPORT ADDED
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.recyclerview.widget.RecyclerView;
-import com.bumptech.glide.Glide; // IMPORT ADDED
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners; // IMPORT ADDED
-import com.bumptech.glide.request.RequestOptions; // IMPORT ADDED
-import com.google.firebase.auth.FirebaseAuth;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
+import com.bumptech.glide.request.RequestOptions;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MessageViewHolder> {
 
@@ -21,7 +26,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     private List<Message> messageList;
     private String currentUserId;
 
-    // --- CRITICAL FIX: Updated constructor to accept currentUserId ---
+    // --- Constructor is now correct ---
     public MessagesAdapter(List<Message> messageList, String currentUserId) {
         this.messageList = messageList;
         this.currentUserId = currentUserId;
@@ -30,7 +35,6 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     @Override
     public int getItemViewType(int position) {
         Message message = messageList.get(position);
-        // Safety check for null senderId
         if (message.getSenderId() != null && message.getSenderId().equals(currentUserId)) {
             return VIEW_TYPE_SENT;
         } else {
@@ -52,7 +56,8 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
 
     @Override
     public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {
-        holder.bind(messageList.get(position));
+        // Pass the viewType to the bind method
+        holder.bind(messageList.get(position), getItemViewType(position));
     }
 
     @Override
@@ -61,35 +66,60 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     }
 
     static class MessageViewHolder extends RecyclerView.ViewHolder {
-        TextView messageText;
-        ImageView messageImage; // The ImageView for photos
+        TextView messageText, textTimestamp;
+        ImageView messageImage, iconSeenStatus;
 
         public MessageViewHolder(@NonNull View itemView) {
             super(itemView);
             messageText = itemView.findViewById(R.id.messageText);
-            messageImage = itemView.findViewById(R.id.messageImage); // Initialize the ImageView
+            messageImage = itemView.findViewById(R.id.messageImage);
+            textTimestamp = itemView.findViewById(R.id.textTimestamp); // Find timestamp view
+            iconSeenStatus = itemView.findViewById(R.id.iconSeenStatus); // Find seen status icon
         }
 
-        public void bind(Message message) {
-            // Check the message type
+        public void bind(Message message, int viewType) {
+            // Bind content (text or image)
             if ("image".equals(message.getType())) {
-                // It's an image. Hide text, show image.
                 messageText.setVisibility(View.GONE);
                 messageImage.setVisibility(View.VISIBLE);
-
-                // Define Glide options for rounded corners
-                RequestOptions requestOptions = new RequestOptions()
-                        .transform(new RoundedCorners(32));
-
+                RequestOptions requestOptions = new RequestOptions().transform(new RoundedCorners(32));
                 Glide.with(itemView.getContext())
-                        .load(message.getContent()) // The content is the URL
+                        .load(message.getContent())
                         .apply(requestOptions)
                         .into(messageImage);
             } else {
-                // It's a text message. Show text, hide image.
                 messageText.setVisibility(View.VISIBLE);
                 messageImage.setVisibility(View.GONE);
                 messageText.setText(message.getContent());
+            }
+
+            // Bind Timestamp
+            SimpleDateFormat formatter = new SimpleDateFormat("h:mm a", Locale.getDefault());
+            textTimestamp.setText(formatter.format(new Date(message.getTimestamp())));
+
+            // Bind Seen Status (ONLY for sent messages)
+            if (viewType == VIEW_TYPE_SENT) {
+                if (iconSeenStatus == null) return; // Safety check
+                if (message.isSeen()) {
+                    // Seen: Blue/Purple check
+                    iconSeenStatus.setVisibility(View.VISIBLE);
+                    DrawableCompat.setTint(
+                            iconSeenStatus.getDrawable(),
+                            ContextCompat.getColor(itemView.getContext(), R.color.deep_purple) // Your purple
+                    );
+                } else {
+                    // Sent/Delivered: Gray check
+                    iconSeenStatus.setVisibility(View.VISIBLE);
+                    DrawableCompat.setTint(
+                            iconSeenStatus.getDrawable(),
+                            ContextCompat.getColor(itemView.getContext(), R.color.inactive_gray)
+                    );
+                }
+            } else {
+                // Hide icon if it's a received message
+                if (iconSeenStatus != null) {
+                    iconSeenStatus.setVisibility(View.GONE);
+                }
             }
         }
     }

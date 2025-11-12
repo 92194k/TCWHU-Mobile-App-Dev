@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/pure_white"
+    android:background="?attr/colorSurface"
     tools:context=".ChatFragment">
 
     <LinearLayout
@@ -80,7 +80,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="No conversations yet"
-                android:textColor="@color/text_secondary"/>
+                android:textColor="?android:attr/textColorSecondary"/>
         </LinearLayout>
     </RelativeLayout>
 </LinearLayout>

@@ -25,13 +25,13 @@
 
             <TextView
                 android:id="@+id/textAvatar"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
                 android:layout_gravity="center"
                 android:background="@drawable/bg_icon_circle"
                 android:gravity="center"
                 android:textColor="@color/deep_purple"
-                android:textSize="50sp"
+                android:textSize="60sp"
                 tools:text="😎" />
         </FrameLayout>
 

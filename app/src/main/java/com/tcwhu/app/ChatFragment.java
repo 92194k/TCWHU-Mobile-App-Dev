@@ -34,7 +34,7 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
     private String currentUserId;
     private ListenerRegistration chatListListener;
     private LinearLayout emptyView;
-    private List<String> blockedUsersList = new ArrayList<>(); // <-- ADDED
+    private List<String> blockedUsersList = new ArrayList<>();
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -64,7 +64,7 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
     @Override
     public void onResume() {
         super.onResume();
-        loadCurrentUserProfile(); // <-- CHANGED: Load block list first
+        loadCurrentUserProfile();
     }
 
     @Override
@@ -81,9 +81,11 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
         recyclerView.setAdapter(adapter);
     }
 
-    // --- ADDED: Load current user's block list ---
     private void loadCurrentUserProfile() {
-        if (currentUserId == null) return;
+        if (currentUserId == null) {
+            loadAllUsersAndListenForChats(); // No user, just load
+            return;
+        }
         db.collection("users").document(currentUserId).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
@@ -131,12 +133,13 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                     for (QueryDocumentSnapshot doc : snapshots) {
                         Chat chat = doc.toObject(Chat.class);
 
-                        // --- CRITICAL FIX: Hide chats from blocked users ---
                         String otherUserId = null;
-                        for(String id : chat.getUsers()) {
-                            if (!id.equals(currentUserId)) {
-                                otherUserId = id;
-                                break;
+                        if(chat.getUsers() != null) {
+                            for(String id : chat.getUsers()) {
+                                if (!id.equals(currentUserId)) {
+                                    otherUserId = id;
+                                    break;
+                                }
                             }
                         }
 

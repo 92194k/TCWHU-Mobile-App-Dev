@@ -61,7 +61,8 @@ public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHold
 
         public void bind(final Report report, final Map<String, String> userNicknameMap, final OnActionListener listener) {
             String reporterName = userNicknameMap.getOrDefault(report.getReporterId(), "Unknown User");
-            String reportedName = userNicknameMap.getOrDefault(report.getReportedId(), "Unknown User");
+            String reportedName = userNicknameMap.getOrDefault(report.getReportedUserId(), "Unknown User");
+
 
             reportTitle.setText("Report from " + reporterName);
 

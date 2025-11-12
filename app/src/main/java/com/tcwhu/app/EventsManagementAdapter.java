@@ -5,25 +5,31 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.bumptech.glide.Glide;
-
+import com.bumptech.glide.load.resource.bitmap.CenterCrop;
+import com.bumptech.glide.request.RequestOptions;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 
 public class EventsManagementAdapter extends RecyclerView.Adapter<EventsManagementAdapter.ViewHolder> {
 
-    private final List<Event> events;
-    private final Consumer<Event> onDeleteClick;
+    // --- UPDATED: Interface now handles clicks AND deletes ---
+    public interface OnEventActionListener {
+        void onEventClick(Event event);
+        void onDelete(Event event);
+    }
 
-    public EventsManagementAdapter(List<Event> events, Consumer<Event> onDeleteClick) {
+    private final List<Event> events;
+    private final OnEventActionListener listener; // Changed from Consumer
+
+    public EventsManagementAdapter(List<Event> events, OnEventActionListener listener) {
         this.events = events;
-        this.onDeleteClick = onDeleteClick;
+        this.listener = listener;
     }
 
     @NonNull
@@ -37,13 +43,7 @@ public class EventsManagementAdapter extends RecyclerView.Adapter<EventsManageme
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Event event = events.get(position);
-        holder.bind(event);
-
-        holder.deleteButton.setOnClickListener(v -> {
-            if (onDeleteClick != null) {
-                onDeleteClick.accept(event);
-            }
-        });
+        holder.bind(event, listener); // Pass listener to bind
     }
 
     @Override
@@ -66,13 +66,13 @@ public class EventsManagementAdapter extends RecyclerView.Adapter<EventsManageme
             eventImage = itemView.findViewById(R.id.imageEvent);
         }
 
-        public void bind(Event event) {
+        public void bind(final Event event, final OnEventActionListener listener) {
             title.setText(event.getTitle());
             description.setText(event.getDescription());
             postedBy.setText("Posted by: " + event.getPostedBy());
 
             if (event.getDate() != 0) {
-                SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy");
+                SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
                 eventDate.setText("— " + sdf.format(new Date(event.getDate())));
             } else {
                 eventDate.setText("");
@@ -89,12 +89,27 @@ public class EventsManagementAdapter extends RecyclerView.Adapter<EventsManageme
                 eventImage.setVisibility(View.VISIBLE);
                 Glide.with(eventImage.getContext())
                         .load(event.getImageUrl())
-                        .placeholder(R.drawable.ic_delete)
+                        .centerCrop()
+                        .placeholder(R.drawable.ic_events)
                         .error(R.drawable.ic_alert_error)
                         .into(eventImage);
             } else {
                 eventImage.setVisibility(View.GONE);
             }
+
+            // --- Click Listeners ---
+            deleteButton.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onDelete(event);
+                }
+            });
+
+            // --- ADDED: Click listener for the whole card ---
+            itemView.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onEventClick(event);
+                }
+            });
         }
     }
 }

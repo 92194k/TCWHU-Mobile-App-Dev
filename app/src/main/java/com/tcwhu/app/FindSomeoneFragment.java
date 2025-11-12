@@ -45,7 +45,7 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
     private String currentSearchQuery = "";
     private String currentUserId;
 
-    private List<String> blockedUsersList = new ArrayList<>(); // <-- ADDED
+    private List<String> blockedUsersList = new ArrayList<>();
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -79,7 +79,7 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
     @Override
     public void onResume() {
         super.onResume();
-        loadCurrentUserProfile(); // <-- CHANGED: Load block list first
+        loadCurrentUserProfile();
     }
 
     private void setupRecyclerView() {
@@ -134,9 +134,11 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
         });
     }
 
-    // --- ADDED: Load current user's block list ---
     private void loadCurrentUserProfile() {
-        if (currentUserId == null) return;
+        if (currentUserId == null) {
+            loadAllVerifiedStudents(); // No user, just load students
+            return;
+        }
         db.collection("users").document(currentUserId).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
@@ -145,7 +147,6 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
                             blockedUsersList = currentUser.getBlockedUsers();
                         }
                     }
-                    // After getting the block list, load all other students
                     loadAllVerifiedStudents();
                 })
                 .addOnFailureListener(e -> {
@@ -165,7 +166,6 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             Student student = document.toObject(Student.class);
                             student.setUserId(document.getId());
-                            // --- CRITICAL FIX: Hide self AND blocked users ---
                             if (currentUserId != null
                                     && !student.getUserId().equals(currentUserId)
                                     && !blockedUsersList.contains(student.getUserId())) {

@@ -1,19 +1,23 @@
 package com.tcwhu.app;
 
 import com.google.firebase.firestore.Exclude;
+import java.io.Serializable; // <-- IMPORT ADDED
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
-public class Event {
+public class Event implements Serializable { // <-- IMPLEMENTS SERIALIZABLE
 
     @Exclude
     private String id; // Firestore document ID
 
     private String title;
     private String description;
-    private long date;          // stored as timestamp
-    private String imageUrl;    // URL for event image
+    private long date;
+    private String imageUrl;
     private String postedBy;
-    private String targetId;    // optional, for admin targeting
-    private String icon;        // optional, emoji or text icon
+    private String targetId;
+    private String icon;
 
     public Event() {}
 
@@ -25,6 +29,7 @@ public class Event {
         this.postedBy = postedBy;
     }
 
+    // Constructor with all fields
     public Event(String title, String description, long date, String imageUrl, String postedBy, String targetId, String icon) {
         this.title = title;
         this.description = description;
@@ -61,7 +66,7 @@ public class Event {
     public void setIcon(String icon) { this.icon = icon; }
 
     public String getFormattedDate() {
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MMM dd, yyyy");
-        return sdf.format(new java.util.Date(date));
+        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
+        return sdf.format(new Date(date));
     }
 }

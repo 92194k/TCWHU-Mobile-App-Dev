@@ -28,7 +28,6 @@
             android:orientation="vertical"
             android:padding="24dp">
 
-            <!-- Privacy warning box -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -53,7 +52,6 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- Student number -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
@@ -76,7 +74,6 @@
                 android:layout_marginTop="4dp"
                 android:text="@string/signup_student_number_guide" />
 
-            <!-- Email -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
@@ -99,7 +96,6 @@
                 android:layout_marginTop="4dp"
                 android:text="For verification process only" />
 
-            <!-- Password -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
@@ -123,7 +119,6 @@
                 android:layout_marginTop="4dp"
                 android:text="@string/signup_password_guide" />
 
-            <!-- Confirm password -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
@@ -139,7 +134,6 @@
                     android:inputType="textPassword"/>
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Nickname -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
@@ -162,7 +156,6 @@
                 android:text="@string/signup_nickname_warning"
                 android:textColor="@color/warning_text" />
 
-            <!-- Year Level -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
@@ -184,7 +177,6 @@
                 android:layout_marginTop="4dp"
                 android:text="@string/signup_year_level_guide" />
 
-            <!-- Interests -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
@@ -206,7 +198,6 @@
                 android:layout_marginTop="4dp"
                 android:text="@string/signup_interests_guide" />
 
-            <!-- Privacy agreement -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -217,7 +208,6 @@
                 android:textColor="@color/text_primary"
                 android:textSize="14sp" />
 
-            <!-- Continue Button -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

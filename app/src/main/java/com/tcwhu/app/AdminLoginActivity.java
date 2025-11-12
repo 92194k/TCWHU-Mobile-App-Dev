@@ -53,7 +53,7 @@ public class AdminLoginActivity extends AppCompatActivity {
         String accessCode = inputAccessCode.getText().toString().trim();
 
         if (username.isEmpty() || accessCode.isEmpty()) {
-            Toast.makeText(this, "Please enter username and access code", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please enter your username and access code.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -64,11 +64,11 @@ public class AdminLoginActivity extends AppCompatActivity {
                         // Global access code is correct, now check if the username is a registered admin
                         checkAdminUsername(username);
                     } else {
-                        Toast.makeText(this, "Invalid access code.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Incorrect username or password.", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Admin access check failed.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Incorrect username or password.", Toast.LENGTH_SHORT).show();
                 });
     }
 
