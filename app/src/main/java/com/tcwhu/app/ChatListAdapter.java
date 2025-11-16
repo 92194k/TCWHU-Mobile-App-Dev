@@ -1,14 +1,14 @@
 package com.tcwhu.app;
 
-import android.graphics.Typeface; // IMPORT ADDED
+import android.graphics.Typeface;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout; // IMPORT ADDED
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat; // IMPORT ADDED
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.auth.FirebaseAuth;
 import java.text.SimpleDateFormat;
@@ -17,6 +17,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
 
 public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHolder> {
 
@@ -33,12 +36,14 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         this.chatList = chatList;
         this.studentMap = studentMap;
         this.listener = listener;
-        this.currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        cleanDeletedUsers();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            this.currentUserId = user.getUid();
+        }
     }
 
     private void cleanDeletedUsers() {
-        if (chatList == null || studentMap == null) return;
+        if (chatList == null || studentMap == null || currentUserId == null) return;
 
         Iterator<Chat> iterator = chatList.iterator();
         while (iterator.hasNext()) {
@@ -75,7 +80,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Chat chat = chatList.get(position);
 
-        if (chat.getUsers() == null || chat.getUsers().isEmpty()) {
+        if (chat.getUsers() == null || chat.getUsers().isEmpty() || currentUserId == null) {
             holder.itemView.setVisibility(View.GONE);
             holder.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
             return;
@@ -133,17 +138,19 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
 
                 // --- CRITICAL FIX: Set BOLD for unread messages ---
                 if (chat.getLastSenderId() != null && !chat.getLastSenderId().equals(currentUserId) && !chat.isRead()) {
-                    // UNREAD: Make text bold and purple
+                    // UNREAD: Make text bold and change color
                     textNickname.setTypeface(null, Typeface.BOLD);
                     textLastMessage.setTypeface(null, Typeface.BOLD);
                     textTime.setTypeface(null, Typeface.BOLD);
-                    textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.deep_purple));
+                    textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_primary));
+                    textTime.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.deep_purple));
                 } else {
                     // READ: Make text normal and gray
                     textNickname.setTypeface(null, Typeface.NORMAL);
                     textLastMessage.setTypeface(null, Typeface.NORMAL);
                     textTime.setTypeface(null, Typeface.NORMAL);
                     textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
+                    textTime.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
                 }
 
                 itemView.setOnClickListener(v -> listener.onChatSelected(otherUserId));

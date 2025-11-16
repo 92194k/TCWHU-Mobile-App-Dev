@@ -1,110 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
     android:background="@color/light_gray"
+    android:fitsSystemWindows="true"
     tools:context=".ChatWindowActivity">
 
-    <LinearLayout
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:fitsSystemWindows="true">
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface"
+        android:elevation="2dp"
+        app:menu="@menu/menu_chat_options"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="?attr/colorOnSurface">
 
-        <!-- Toolbar -->
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@color/pure_white"
-            android:elevation="2dp"
-            app:navigationIcon="@drawable/ic_arrow_back"
-            app:titleTextColor="@color/text_primary">
+            android:orientation="vertical">
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/textChatUsername"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                tools:text="BlueDragon" />
 
-                <TextView
-                    android:id="@+id/textChatUsername"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    tools:text="BlueDragon" />
+            <TextView
+                android:id="@+id/textChatYear"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="12sp"
+                tools:text="2nd Year" />
+        </LinearLayout>
+    </com.google.android.material.appbar.MaterialToolbar>
 
-                <TextView
-                    android:id="@+id/textChatYear"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    tools:text="2nd Year" />
-            </LinearLayout>
-        </com.google.android.material.appbar.MaterialToolbar>
+    <TextView
+        android:id="@+id/textChattingWithBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/toolbar"
+        android:background="#F3E5F5"
+        android:gravity="center"
+        android:padding="12dp"
+        android:textColor="@color/deep_purple"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        tools:text="You are chatting with BlueDragon" />
 
-        <!-- Chat Banner -->
-        <TextView
-            android:id="@+id/textChattingWithBanner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="12dp"
-            android:background="#F3E5F5"
-            android:textColor="@color/deep_purple"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            tools:text="You are chatting with BlueDragon" />
+    <ProgressBar
+        android:id="@+id/chatProgressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/textChattingWithBanner"
+        android:indeterminate="true"
+        android:visibility="gone"
+        app:indicatorColor="@color/deep_purple"
+        tools:visibility="visible" />
 
-        <!-- Message List -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/messagesRecyclerView"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:padding="8dp"
-            android:clipToPadding="false"
-            android:scrollbars="vertical"
-            tools:listitem="@layout/item_message_sent" />
+    <LinearLayout
+        android:id="@+id/bottom_bar_wrapper"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical">
 
-        <!-- Input Container -->
         <LinearLayout
             android:id="@+id/inputContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="?attr/colorSurface"
+            android:elevation="4dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="8dp"
-            android:background="@color/pure_white"
-            android:elevation="4dp">
+            android:padding="8dp">
 
             <ImageButton
                 android:id="@+id/buttonPaperclip"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_upload"
-                app:tint="@color/text_secondary"
-                android:contentDescription="Attach File" />
+                android:contentDescription="Attach File"
+                android:src="@drawable/ic_add_photo"
+                app:tint="@color/text_secondary" />
 
             <EditText
                 android:id="@+id/inputMessage"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:background="@drawable/bg_search_input"
                 android:hint="Type a message..."
+                android:imeOptions="actionSend"
+                android:inputType="textMultiLine|textCapSentences"
                 android:minHeight="48dp"
                 android:paddingHorizontal="16dp"
-                android:background="@drawable/bg_search_input"
-                android:textSize="16sp"
-                android:imeOptions="actionSend"
-                android:inputType="textMultiLine|textCapSentences" />
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="16sp" />
 
             <ImageButton
                 android:id="@+id/buttonMic"
@@ -112,17 +113,63 @@
                 android:layout_height="48dp"
                 android:layout_marginHorizontal="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Voice Message"
                 android:src="@drawable/ic_mic"
-                app:tint="@color/text_secondary"
-                android:contentDescription="Music" />
+                app:tint="@color/text_secondary" />
+
             <ImageButton
                 android:id="@+id/buttonSend"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/bg_button_primary"
+                android:contentDescription="Send Message"
                 android:src="@drawable/ic_arrow_forward"
-                app:tint="@color/pure_white"
-                android:contentDescription="Send Message" />
+                app:tint="@color/pure_white" />
         </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/adminWarningActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/colorSurface"
+            android:elevation="4dp"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <Button
+                android:id="@+id/buttonConfirmWarning"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="Confirm" />
+
+            <Button
+                android:id="@+id/buttonAppealWarning"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="Appeal"
+                app:backgroundTint="@color/deep_purple" />
+
+        </LinearLayout>
+
     </LinearLayout>
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/messagesRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottom_bar_wrapper"
+        android:layout_below="@id/chatProgressBar"
+        android:clipToPadding="false"
+        android:padding="8dp"
+        android:scrollbars="vertical"
+        tools:listitem="@layout/item_message_sent" />
+
+</RelativeLayout>

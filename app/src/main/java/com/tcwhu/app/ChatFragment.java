@@ -83,7 +83,7 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
 
     private void loadCurrentUserProfile() {
         if (currentUserId == null) {
-            loadAllUsersAndListenForChats(); // No user, just load
+            loadAllUsersAndListenForChats();
             return;
         }
         db.collection("users").document(currentUserId).get()
@@ -111,9 +111,18 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                         Student student = doc.toObject(Student.class);
                         studentMap.put(doc.getId(), student);
                     }
+
+                    // --- CRITICAL FIX: Manually add the Admin to the map ---
+                    Student adminUser = new Student();
+                    adminUser.setNickname("System Admin");
+                    adminUser.setAvatar("🛡️");
+                    adminUser.setRole("admin");
+                    studentMap.put(ReportsManagementActivity.ADMIN_USER_ID, adminUser);
+                    // --- END OF FIX ---
+
                     listenForChats();
                 })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Failed to load user data.", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error loading user data.", Toast.LENGTH_SHORT).show());
     }
 
     private void listenForChats() {
@@ -143,7 +152,8 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                             }
                         }
 
-                        if (otherUserId != null && !blockedUsersList.contains(otherUserId)) {
+                        // Check if other user exists in map (including admin) and is not blocked
+                        if (otherUserId != null && studentMap.containsKey(otherUserId) && !blockedUsersList.contains(otherUserId)) {
                             chatList.add(chat);
                         }
                     }

@@ -21,14 +21,15 @@ public class Student implements Serializable {
     private long deletionDate;
     private String deletionReason;
 
-    // --- CRITICAL FIX: Changed to Boolean to handle nulls from Firestore ---
     private Boolean isVerified;
     private Boolean isBanned;
     private Boolean isSuspended;
     private Boolean isDeletionRequested;
-    private Integer warningCount; // ADDED: To track warnings
+    private Integer warningCount;
 
-    public Student() {} // Required empty constructor
+    private String role; // <-- ADDED
+
+    public Student() {}
 
     // --- Getters ---
     @Exclude
@@ -46,24 +47,21 @@ public class Student implements Serializable {
     public long getSuspendEndDate() { return suspendEndDate; }
     public long getDeletionDate() { return deletionDate; }
     public String getDeletionReason() { return deletionReason; }
-    public Integer getWarningCount() { return warningCount != null ? warningCount : 0; } // Null-safe getter
+    public Integer getWarningCount() { return warningCount != null ? warningCount : 0; }
+    public String getRole() { return role; } // <-- ADDED
 
-    // --- CRITICAL FIX: Null-safe boolean getters ---
     @PropertyName("isVerified")
     public boolean isVerified() {
         return isVerified != null && isVerified;
     }
-
     @PropertyName("isBanned")
     public boolean isBanned() {
         return isBanned != null && isBanned;
     }
-
     @PropertyName("isSuspended")
     public boolean isSuspended() {
         return isSuspended != null && isSuspended;
     }
-
     @PropertyName("isDeletionRequested")
     public boolean isDeletionRequested() {
         return isDeletionRequested != null && isDeletionRequested;
@@ -85,16 +83,14 @@ public class Student implements Serializable {
     public void setDeletionDate(long deletionDate) { this.deletionDate = deletionDate; }
     public void setDeletionReason(String deletionReason) { this.deletionReason = deletionReason; }
     public void setWarningCount(Integer warningCount) { this.warningCount = warningCount; }
+    public void setRole(String role) { this.role = role; } // <-- ADDM
 
     @PropertyName("isVerified")
     public void setVerified(boolean verified) { isVerified = verified; }
-
     @PropertyName("isBanned")
     public void setBanned(boolean banned) { isBanned = banned; }
-
     @PropertyName("isSuspended")
     public void setSuspended(boolean suspended) { isSuspended = suspended; }
-
     @PropertyName("isDeletionRequested")
     public void setDeletionRequested(boolean deletionRequested) { isDeletionRequested = deletionRequested; }
 }

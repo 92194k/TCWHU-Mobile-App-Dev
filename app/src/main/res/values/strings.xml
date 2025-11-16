@@ -1,6 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App Name -->
     <string name="app_name">TCWHU Mobile App</string>
 
+    <!-- Account Creation Strings -->
     <string name="create_account">Create Account</string>
     <string name="signup_privacy_warning">Privacy &amp; Safety First: Do not share personal information.</string>
     <string name="student_number">Student Number</string>
@@ -14,72 +17,58 @@
     <string name="continue_to_upload_photos">Continue to Upload Photos</string>
     <string name="icon_description_warning">Warning Icon</string>
 
+    <!-- Signup Guides -->
     <string name="signup_student_number_guide">e.g., 23-00001 (For verification only)</string>
-
     <string name="signup_password_guide">Must be at least 6 characters.</string>
     <string name="signup_year_level_guide">Note: Can only be changed once per year.</string>
     <string name="signup_interests_guide">e.g., Gaming, Sports, Studies</string>
     <string name="signup_nickname_warning">⚠️ Do NOT use your real name!</string>
-    <string name="next_step_warning">🔒 Next Step: You will upload verification photos.</string>
+    <string name="next_step_warning">Next Step: You will upload verification photos.</string>
     <string name="photo_upload_selfie_guide">Must be a clear, recent photo of your face. No filters, hats, or sunglasses.</string>
     <string name="photo_upload_id_guide">Upload a clear photo of the front of your valid TCU ID.</string>
 
-    <string name="title_activity_privacy_policy">Privacy Policy &amp; Rules</string>
-    <string name="privacy_policy_title">TCWHU Mobile App\nPrivacy Policy and Community Guidelines</string>
+    <!-- Privacy Policy & Community Guidelines -->
+    <string name="title_activity_privacy_policy">Privacy Policy &amp; Community Guidelines</string>
+    <string name="privacy_policy_title">TCWHU Mobile App - Privacy &amp; Community Rules</string>
     <string name="privacy_policy_body"><![CDATA[
-        <i>Effective Date: November 2, 2025</i>
+        <b>About TCWHU Mobile App</b>
         <br><br>
-        Welcome to the TCWHU Mobile App.
-        Your privacy, anonymity, and safety are our top priorities.
-        By creating an account or using this application, you acknowledge that you have read, understood, and agreed to the following terms and conditions.
+        TCWHU Mobile App is a private 1-on-1 messaging platform for TCWHU students. Users can find someone to chat with based on year, display name, and shared interests, while maintaining a safe and respectful environment.
         <br><br>
-        <b>1. Anonymity and Personal Information</b>
+        <b>Privacy Policy</b>
         <br><br>
-        To protect your safety and maintain a respectful environment, all users must remain anonymous within the platform.
-        <br>
-        You <b>MUST NOT</b> use your real name as your display name or nickname.
-        You <b>MUST NOT</b> share personal identifying information in your profile, chats, or any public spaces within the app.
-        Prohibited information includes:
+        <b>1. Information We Collect</b>
+        <br>• <b>Photo Verification:</b> Selfie and valid TCU ID to confirm identity.
+        <br>• <b>Basic Details:</b> Year level, display name (not real name), and interests.
+        <br>• <b>Chat Data:</b> Messages are stored securely and are not shared publicly.
         <br><br>
-        &nbsp;&nbsp;&nbsp;- Full name or surname
-        <br>
-        &nbsp;&nbsp;&nbsp;- Phone number, address, or email
-        <br>
-        &nbsp;&nbsp;&nbsp;- Class schedules or course sections
-        <br>
-        &nbsp;&nbsp;&nbsp;- Personal social media accounts
+        <b>2. How We Use Your Data</b>
+        <br>• To verify user identity and prevent fake accounts.
+        <br>• To recommend matches based on shared interests.
+        <br>• To maintain a secure and respectful community.
         <br><br>
-        <b>2. Photo Verification (Administrator Access Only)</b>
+        <b>3. Data Privacy &amp; Security</b>
+        <br>Your data is encrypted and used solely for verification and moderation. We comply with the Philippine <b>Data Privacy Act of 2012 (R.A. 10173)</b>. Personal information is never sold or shared externally.
         <br><br>
-        During sign-up, you must upload a selfie and your TCU ID for verification.
-        These images are securely stored and accessible only to TCWHU administrators.
-        Your visible profile avatar must be a non-identifiable emoji or cartoon image.
+        <b>Community Guidelines</b>
         <br><br>
-        <b>3. Safe and Respectful Communication</b>
+        <b>1. Keep It Safe</b>
+        <br>- Do not use your real name.
+        <br>- Do not share personal information such as address, contact number, or social media accounts.
+        <br>- Photo verification is private and used only for authentication.
         <br><br>
-        Be respectful in all interactions. Avoid harassment, bullying, hate speech, or explicit content.
-        Use the “Report” feature to flag inappropriate behavior.
+        <b>2. Be Respectful</b>
+        <br>- Avoid harassment, bullying, hate speech, or explicit content.
+        <br>- Respect others’ privacy and boundaries.
         <br><br>
-        <b>4. Account Violations and Enforcement</b>
+        <b>3. Account Violations &amp; Enforcement</b>
+        <br>- First offense: Warning
+        <br>- Repeated offense: Temporary suspension
+        <br>- Severe or continued violation: Permanent ban
         <br><br>
-        Admins may issue:
-        <br>
-        &nbsp;&nbsp;&nbsp;- Warnings
-        <br>
-        &nbsp;&nbsp;&nbsp;- Suspensions
-        <br>
-        &nbsp;&nbsp;&nbsp;- Permanent bans
-        <br>
-        based on rule violations.
+        <b>4. Agreement &amp; Compliance</b>
+        <br>By creating an account, you agree to follow TCWHU Mobile App’s Privacy Policy and Community Guidelines. Violations may result in account restrictions or removal. Your use of the app confirms compliance with R.A. 10173 for safe handling of your personal data.
         <br><br>
-        <b>5. Data Privacy and Security</b>
-        <br><br>
-        Your data is stored securely and never shared or sold.
-        You can request account or data deletion anytime.
-        <br><br>
-        <b>6. Agreement and Compliance</b>
-        <br><br>
-        By checking “I Agree,” you confirm you understand and accept these terms.
-        Together, we maintain a safe, respectful, and anonymous community.
+        TCWHU Mobile App aims to provide a secure, private, and respectful space for students to connect and communicate confidently.
     ]]></string>
 </resources>

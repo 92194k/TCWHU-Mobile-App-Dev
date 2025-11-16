@@ -1,22 +1,29 @@
 package com.tcwhu.app;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.WriteBatch;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-public class ReportsManagementActivity extends AppCompatActivity {
+public class ReportsManagementActivity extends AppCompatActivity implements ReportsAdapter.OnActionListener {
 
     private RecyclerView recyclerView;
     private ReportsAdapter adapter;
@@ -24,6 +31,10 @@ public class ReportsManagementActivity extends AppCompatActivity {
     private Map<String, String> userNicknameMap;
     private FirebaseFirestore db;
     private TextView emptyView;
+
+    // --- ADDED: The ID for your admin account ---
+    // !!! IMPORTANT: You must create this user in Firestore manually !!!
+    public static final String ADMIN_USER_ID = "system_admin";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,9 +62,7 @@ public class ReportsManagementActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         reportList = new ArrayList<>();
         userNicknameMap = new HashMap<>();
-        adapter = new ReportsAdapter(reportList, userNicknameMap, (report, action) -> {
-            handleAdminAction(report, action);
-        });
+        adapter = new ReportsAdapter(reportList, userNicknameMap, this::onActionClick);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
     }
@@ -93,15 +102,9 @@ public class ReportsManagementActivity extends AppCompatActivity {
                 });
     }
 
-    private void checkIfEmpty() {
-        emptyView.setVisibility(reportList.isEmpty() ? View.VISIBLE : View.GONE);
-        recyclerView.setVisibility(reportList.isEmpty() ? View.GONE : View.VISIBLE);
-    }
-
-    /**
-     * Handles admin action: warning, suspend, or ban.
-     */
-    private void handleAdminAction(Report report, String action) {
+    // --- UPDATED: This now correctly calls the right methods ---
+    @Override
+    public void onActionClick(Report report, String action) {
         String reportedUserId = report.getReportedUserId();
         if (reportedUserId == null || reportedUserId.isEmpty()) {
             Toast.makeText(this, "Invalid user ID.", Toast.LENGTH_SHORT).show();
@@ -110,112 +113,97 @@ public class ReportsManagementActivity extends AppCompatActivity {
 
         switch (action) {
             case "warning":
-                issueWarning(reportedUserId, report);
+                showWarningDialog(report);
                 break;
-
             case "suspend":
-                suspendUser(reportedUserId, report);
+                showConfirmationDialog("Suspend User", "Suspend this user for 30 days? This action cannot be undone.", report, action);
                 break;
-
             case "ban":
-                banUser(reportedUserId, report);
+                showConfirmationDialog("Permanent Ban", "Permanently ban this user? This action cannot be undone.", report, action);
                 break;
         }
     }
 
-    /**
-     * Issue a warning to the user.
-     * Increments warningCount and notifies the user.
-     */
-    private void issueWarning(String userId, Report report) {
-        db.collection("users").document(userId).get().addOnSuccessListener(snapshot -> {
-            if (snapshot.exists()) {
-                Integer currentCount = snapshot.getLong("warningCount") != null
-                        ? snapshot.getLong("warningCount").intValue() : 0;
+    private void showWarningDialog(Report report) {
+        final EditText inputReason = new EditText(this);
+        inputReason.setHint("Enter warning (e.g., 'Inappropriate language')");
+        inputReason.setPadding(48, 24, 48, 24);
 
-                int newCount = currentCount + 1;
-
-                db.collection("users").document(userId)
-                        .update("warningCount", newCount)
-                        .addOnSuccessListener(aVoid -> {
-                            resolveReport(report, "warning");
-                            // Send a notification entry
-                            Map<String, Object> notif = new HashMap<>();
-                            notif.put("title", "Account Warning Issued");
-                            notif.put("message", "You have received a warning from the admin. Total warnings: " + newCount);
-                            notif.put("timestamp", System.currentTimeMillis());
-                            notif.put("userId", userId);
-                            db.collection("notifications").add(notif);
-
-                            Toast.makeText(this, "Warning issued and user notified.", Toast.LENGTH_SHORT).show();
-                        })
-                        .addOnFailureListener(e -> Toast.makeText(this, "Failed to issue warning.", Toast.LENGTH_SHORT).show());
-            }
-        });
-    }
-
-    /**
-     * Suspend user for 30 days.
-     */
-    private void suspendUser(String userId, Report report) {
-        long suspendEndDate = System.currentTimeMillis() + (30L * 24 * 60 * 60 * 1000); // 30 days in ms
-        Map<String, Object> update = new HashMap<>();
-        update.put("isSuspended", true);
-        update.put("suspendEndDate", suspendEndDate);
-
-        db.collection("users").document(userId)
-                .update(update)
-                .addOnSuccessListener(aVoid -> {
-                    resolveReport(report, "suspend");
-
-                    // Log a notification
-                    Map<String, Object> notif = new HashMap<>();
-                    notif.put("title", "Account Suspended");
-                    notif.put("message", "Your account has been suspended for 30 days. Access will be restored on " +
-                            new java.text.SimpleDateFormat("MMM d, yyyy").format(new java.util.Date(suspendEndDate)) + ".");
-                    notif.put("timestamp", System.currentTimeMillis());
-                    notif.put("userId", userId);
-                    db.collection("notifications").add(notif);
-
-                    Toast.makeText(this, "User suspended for 30 days.", Toast.LENGTH_SHORT).show();
+        new AlertDialog.Builder(this)
+                .setTitle("Issue Warning")
+                .setMessage("This will send a warning to the user via chat and resolve the report.")
+                .setView(inputReason)
+                .setPositiveButton("Send Warning", (dialog, which) -> {
+                    String reason = inputReason.getText().toString().trim();
+                    if (!reason.isEmpty()) {
+                        executeAction(report, "warning", reason);
+                    } else {
+                        Toast.makeText(this, "A warning message is required.", Toast.LENGTH_SHORT).show();
+                    }
                 })
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to suspend user.", Toast.LENGTH_SHORT).show());
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
-    /**
-     * Permanently bans the user.
-     */
-    private void banUser(String userId, Report report) {
-        Map<String, Object> update = new HashMap<>();
-        update.put("isBanned", true);
-        update.put("deletionDate", System.currentTimeMillis() + (90L * 24 * 60 * 60 * 1000)); // optional auto-delete in 90 days
-        update.put("deletionReason", "Permanent ban for violation of rules");
+    private void showConfirmationDialog(String title, String message, Report report, String action) {
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("Confirm", (dialog, which) -> executeAction(report, action, null))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
 
-        db.collection("users").document(userId)
-                .update(update)
+    private void executeAction(Report report, String action, String warningReason) {
+        String reportedUserId = report.getReportedUserId();
+
+        WriteBatch batch = db.batch();
+        DocumentReference userRef = db.collection("users").document(reportedUserId);
+        Map<String, Object> userUpdates = new HashMap<>();
+
+        if ("warning".equals(action)) {
+            userUpdates.put("warningCount", FieldValue.increment(1));
+            batch.update(userRef, userUpdates);
+
+            // --- CRITICAL FIX: Launch Chat with Template ---
+            Intent intent = new Intent(this, ChatWindowActivity.class);
+            intent.putExtra("ADMIN_USER_ID", ADMIN_USER_ID); // Identifies Admin
+            intent.putExtra(ChatWindowActivity.EXTRA_OTHER_USER_ID, reportedUserId); // Identifies Student
+
+            String warningTemplate = "This is an official warning regarding a report filed against your account. \n\nReason: " + warningReason + "\n\nPlease review the community guidelines. Further violations may result in account suspension or a permanent ban.";
+            intent.putExtra("WARNING_TEMPLATE", warningTemplate);
+            startActivity(intent);
+            // --- END OF FIX ---
+
+        } else if ("suspend".equals(action)) {
+            long suspendMillis = TimeUnit.DAYS.toMillis(30);
+            long suspendEndDate = System.currentTimeMillis() + suspendMillis;
+            userUpdates.put("isSuspended", true);
+            userUpdates.put("suspendEndDate", suspendEndDate);
+            userUpdates.put("isBanned", false);
+            batch.update(userRef, userUpdates);
+
+        } else if ("ban".equals(action)) {
+            userUpdates.put("isBanned", true);
+            userUpdates.put("isSuspended", false);
+            batch.update(userRef, userUpdates);
+        }
+
+        DocumentReference reportRef = db.collection("reports").document(report.getId());
+        batch.update(reportRef, "status", "resolved_action_" + action);
+
+        batch.commit()
                 .addOnSuccessListener(aVoid -> {
-                    resolveReport(report, "ban");
-
-                    // Add a notification
-                    Map<String, Object> notif = new HashMap<>();
-                    notif.put("title", "Account Permanently Banned");
-                    notif.put("message", "Your account has been permanently banned due to policy violations.");
-                    notif.put("timestamp", System.currentTimeMillis());
-                    notif.put("userId", userId);
-                    db.collection("notifications").add(notif);
-
-                    Toast.makeText(this, "User permanently banned.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Action taken. Report resolved.", Toast.LENGTH_SHORT).show();
+                    loadPendingReports(); // Refresh the list
                 })
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to ban user.", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed to apply action: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 
-    /**
-     * Marks the report as resolved.
-     */
-    private void resolveReport(Report report, String action) {
-        db.collection("reports").document(report.getId())
-                .update("status", "resolved_action_" + action)
-                .addOnSuccessListener(aVoid -> loadPendingReports())
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to resolve report.", Toast.LENGTH_SHORT).show());
+    private void checkIfEmpty() {
+        emptyView.setVisibility(reportList.isEmpty() ? View.VISIBLE : View.GONE);
+        recyclerView.setVisibility(reportList.isEmpty() ? View.GONE : View.VISIBLE);
     }
 }

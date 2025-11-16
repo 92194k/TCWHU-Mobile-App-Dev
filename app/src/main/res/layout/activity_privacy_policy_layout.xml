@@ -40,11 +40,11 @@
             android:id="@+id/textPrivacyPolicy"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:lineSpacingExtra="4dp"
             android:padding="16dp"
             android:textColor="@color/text_primary"
             android:textSize="16sp"
-            android:lineSpacingExtra="4dp"
-            tools:text="[Policy text will load here]"/>
+            tools:text="[Policy text will load here]" />
 
     </ScrollView>
 </LinearLayout>

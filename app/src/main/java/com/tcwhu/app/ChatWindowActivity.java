@@ -11,8 +11,10 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -61,12 +63,20 @@ public class ChatWindowActivity extends AppCompatActivity {
     private ImageButton buttonSend, buttonPaperclip, buttonMic;
     private TextView textChatUsername, textChatYear, textChattingWithBanner;
     private ProgressBar chatProgressBar;
+
+    private LinearLayout inputContainer;
+    private LinearLayout adminWarningActions;
+    private Button buttonConfirmWarning, buttonAppealWarning;
+
     private String currentUserId;
     private String otherUserId;
     private String chatId;
     private FirebaseFirestore db;
     private ListenerRegistration chatListener;
     private ActivityResultLauncher<Intent> imagePickerLauncher;
+
+    private boolean isChatWithAdmin = false;
+    private boolean amIStudent = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,16 +96,32 @@ public class ChatWindowActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
 
+        String adminIdFromIntent = getIntent().getStringExtra("ADMIN_USER_ID");
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        otherUserId = getIntent().getStringExtra(EXTRA_OTHER_USER_ID);
 
-        if (currentUser == null || otherUserId == null || otherUserId.isEmpty()) {
-            Toast.makeText(this, "Error: Chat session is invalid.", Toast.LENGTH_LONG).show();
+        if (adminIdFromIntent != null && !adminIdFromIntent.isEmpty()) {
+            amIStudent = false;
+            isChatWithAdmin = true;
+            currentUserId = adminIdFromIntent;
+            otherUserId = getIntent().getStringExtra(EXTRA_OTHER_USER_ID);
+        } else {
+            amIStudent = true;
+            if (currentUser == null) {
+                Toast.makeText(this, "Error: You are not logged in.", Toast.LENGTH_LONG).show();
+                finish();
+                return;
+            }
+            currentUserId = currentUser.getUid();
+            otherUserId = getIntent().getStringExtra(EXTRA_OTHER_USER_ID);
+            isChatWithAdmin = otherUserId.equals(ReportsManagementActivity.ADMIN_USER_ID);
+        }
+
+        if (otherUserId == null || otherUserId.isEmpty()) {
+            Toast.makeText(this, "Error: Chat partner is missing.", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
 
-        currentUserId = currentUser.getUid();
         chatId = (currentUserId.compareTo(otherUserId) < 0) ? currentUserId + "_" + otherUserId : otherUserId + "_" + currentUserId;
 
         messagesRecyclerView = findViewById(R.id.messagesRecyclerView);
@@ -107,6 +133,11 @@ public class ChatWindowActivity extends AppCompatActivity {
         textChattingWithBanner = findViewById(R.id.textChattingWithBanner);
         buttonPaperclip = findViewById(R.id.buttonPaperclip);
         buttonMic = findViewById(R.id.buttonMic);
+        chatProgressBar = findViewById(R.id.chatProgressBar);
+        inputContainer = findViewById(R.id.inputContainer);
+        adminWarningActions = findViewById(R.id.adminWarningActions);
+        buttonConfirmWarning = findViewById(R.id.buttonConfirmWarning);
+        buttonAppealWarning = findViewById(R.id.buttonAppealWarning);
 
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
@@ -124,10 +155,31 @@ public class ChatWindowActivity extends AppCompatActivity {
 
         loadChatPartnerDetails();
         listenForMessages();
-        markChatAsRead(); // --- ADDED: Mark as read when opening ---
+
+        // --- CRITICAL FIX: Mark chat as read for EVERYONE (student OR admin) ---
+        // The markChatAsRead() method already has the logic to check
+        // *who* sent the last message, so this is safe to call.
+        markChatAsRead();
+        // --- END OF FIX ---
+
+        setupAdminWarningUI();
+
+        buttonConfirmWarning.setOnClickListener(v -> {
+            sendConfirmationMessage();
+            adminWarningActions.setVisibility(View.GONE);
+        });
+
+        buttonAppealWarning.setOnClickListener(v -> {
+            showAppealDialog();
+        });
 
         buttonSend.setOnClickListener(v -> sendMessage());
         setupActionButtons();
+
+        String warningTemplate = getIntent().getStringExtra("WARNING_TEMPLATE");
+        if (warningTemplate != null && !warningTemplate.isEmpty()) {
+            inputMessage.setText(warningTemplate);
+        }
 
         imagePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -146,9 +198,39 @@ public class ChatWindowActivity extends AppCompatActivity {
         );
     }
 
+    private void setupAdminWarningUI() {
+        if (isChatWithAdmin && amIStudent) {
+            // I am a student talking to the admin
+            inputContainer.setVisibility(View.GONE);
+
+            // Check if warning has already been acknowledged
+            db.collection("chats").document(chatId).get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists() && doc.getBoolean("warningAcknowledged") != null && doc.getBoolean("warningAcknowledged")) {
+                            // Already acknowledged, hide the buttons
+                            adminWarningActions.setVisibility(View.GONE);
+                        } else {
+                            // Not acknowledged, show the buttons
+                            adminWarningActions.setVisibility(View.VISIBLE);
+                        }
+                    });
+
+        } else if (isChatWithAdmin && !amIStudent) {
+            // I am an admin talking to a student
+            inputContainer.setVisibility(View.VISIBLE);
+            adminWarningActions.setVisibility(View.GONE);
+        } else {
+            // Student-to-student chat
+            inputContainer.setVisibility(View.VISIBLE);
+            adminWarningActions.setVisibility(View.GONE);
+        }
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_chat_options, menu);
+        if (!isChatWithAdmin) {
+            getMenuInflater().inflate(R.menu.menu_chat_options, menu);
+        }
         return true;
     }
 
@@ -191,7 +273,14 @@ public class ChatWindowActivity extends AppCompatActivity {
                         String year = documentSnapshot.getString("yearLevel");
 
                         textChatUsername.setText(nickname != null ? nickname : "Unknown");
-                        textChatYear.setText(year != null ? year : "");
+
+                        if (year != null && !year.isEmpty() && !"admin".equals(documentSnapshot.getString("role"))) {
+                            textChatYear.setText(year);
+                            textChatYear.setVisibility(View.VISIBLE);
+                        } else {
+                            textChatYear.setVisibility(View.GONE);
+                        }
+
                         textChattingWithBanner.setText("You are chatting with " + (nickname != null ? nickname : "Unknown"));
                     }
                 })
@@ -217,12 +306,10 @@ public class ChatWindowActivity extends AppCompatActivity {
                             Message message = dc.getDocument().toObject(Message.class);
                             newMessages.add(message);
 
-                            // Mark message as seen by this user
                             if (!message.isSeen() && !message.getSenderId().equals(currentUserId)) {
                                 markMessageAsSeen(dc.getDocument().getReference());
                             }
                         } else if (dc.getType() == DocumentChange.Type.MODIFIED) {
-                            // This handles the "seen" status update in real-time
                             Message modifiedMessage = dc.getDocument().toObject(Message.class);
                             for(int i = 0; i < messageList.size(); i++) {
                                 if (messageList.get(i).getTimestamp() == modifiedMessage.getTimestamp()) {
@@ -248,7 +335,6 @@ public class ChatWindowActivity extends AppCompatActivity {
         messageRef.update("seen", true);
     }
 
-    // --- ADDED: Method to mark the chat summary as "read" ---
     private void markChatAsRead() {
         db.collection("chats").document(chatId)
                 .get()
@@ -269,21 +355,26 @@ public class ChatWindowActivity extends AppCompatActivity {
 
         saveMessageToFirestore("text", content, () -> {
             inputMessage.setText("");
-            updateChatOverview(content); // Update summary AFTER message is sent
+            updateChatOverview(content, false); // Not an acknowledgment
         });
     }
 
-    private void updateChatOverview(String lastMessage) {
+    // --- UPDATED: This now takes a boolean ---
+    private void updateChatOverview(String lastMessage, boolean isAcknowledgment) {
         Map<String, Object> chatOverview = new HashMap<>();
         chatOverview.put("lastMessage", lastMessage);
         chatOverview.put("timestamp", System.currentTimeMillis());
-        // --- CRITICAL FIX: Use "users" to match your ChatFragment query ---
         chatOverview.put("users", Arrays.asList(currentUserId, otherUserId));
-        chatOverview.put("lastSenderId", currentUserId); // <-- ADDED
-        chatOverview.put("read", false); // <-- ADDED: Mark as unread for the other user
+        chatOverview.put("lastSenderId", currentUserId);
+        chatOverview.put("read", false);
+
+        // --- CRITICAL FIX: This saves the student's choice ---
+        if(isAcknowledgment) {
+            chatOverview.put("warningAcknowledged", true);
+        }
 
         db.collection("chats").document(chatId)
-                .set(chatOverview)
+                .set(chatOverview) // Use set() to create or overwrite
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Failed to update chat overview.", Toast.LENGTH_SHORT).show());
     }
@@ -311,7 +402,7 @@ public class ChatWindowActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e("ChatWindow", "Error getting file size", e);
         }
-        return -1; // Error
+        return -1;
     }
 
     private void uploadImageToCloudinary(Uri imageUri) {
@@ -340,7 +431,7 @@ public class ChatWindowActivity extends AppCompatActivity {
 
     private void sendImageMessage(String imageUrl) {
         saveMessageToFirestore("image", imageUrl, () -> {
-            updateChatOverview("[Image]");
+            updateChatOverview("[Image]", false);
         });
     }
 
@@ -350,7 +441,7 @@ public class ChatWindowActivity extends AppCompatActivity {
         message.put("content", content);
         message.put("type", type);
         message.put("timestamp", System.currentTimeMillis());
-        message.put("seen", false); // All messages start as "not seen"
+        message.put("seen", false);
 
         db.collection("chats")
                 .document(chatId)
@@ -384,6 +475,42 @@ public class ChatWindowActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void showAppealDialog() {
+        final EditText inputAppeal = new EditText(this);
+        inputAppeal.setHint("Please explain your side...");
+        inputAppeal.setPadding(48, 24, 48, 24);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Appeal Warning")
+                .setMessage("Your appeal will be sent to the admin for review. Please be respectful.")
+                .setView(inputAppeal)
+                .setPositiveButton("Send Appeal", (dialog, which) -> {
+                    String appealText = inputAppeal.getText().toString().trim();
+                    if (!appealText.isEmpty()) {
+                        String finalMessage = "[APPEAL]: " + appealText;
+                        saveMessageToFirestore("text", finalMessage, () -> {
+                            updateChatOverview(finalMessage, true); // This IS an acknowledgment
+                        });
+                        Toast.makeText(this, "Appeal sent.", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "An explanation is required to appeal.", Toast.LENGTH_SHORT).show();
+                        adminWarningActions.setVisibility(View.VISIBLE); // Show buttons again
+                    }
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    adminWarningActions.setVisibility(View.VISIBLE); // Show buttons again
+                })
+                .show();
+    }
+
+    private void sendConfirmationMessage() {
+        String message = "[User has read and acknowledged the warning]";
+        saveMessageToFirestore("text", message, () -> {
+            updateChatOverview(message, true); // This IS an acknowledgment
+            Toast.makeText(this, "Warning Acknowledged", Toast.LENGTH_SHORT).show();
+        });
     }
 
     private void showBlockDialog() {

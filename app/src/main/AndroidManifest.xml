@@ -18,6 +18,9 @@
         <!-- All Notification-related code has been removed -->
 
         <activity
+            android:name=".AdminChatListActivity"
+            android:exported="false" />
+        <activity
             android:name=".EventDetailActivity"
             android:exported="false"
             android:theme="@style/AppTheme" />

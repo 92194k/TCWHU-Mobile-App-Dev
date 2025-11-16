@@ -24,6 +24,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -155,6 +156,8 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
     }
 
     private void loadAllVerifiedStudents() {
+        // --- CRITICAL FIX: Use the simple query ---
+        // We will filter out the admin in the code, which is safer and won't crash.
         db.collection("users")
                 .whereEqualTo("isVerified", true)
                 .whereEqualTo("isBanned", false)
@@ -166,6 +169,13 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             Student student = document.toObject(Student.class);
                             student.setUserId(document.getId());
+
+                            // --- CRITICAL FIX: Filter out admin role in code ---
+                            // This safely handles 'null' roles
+                            if ("admin".equals(student.getRole())) {
+                                continue; // Skip this user, it's the admin
+                            }
+
                             if (currentUserId != null
                                     && !student.getUserId().equals(currentUserId)
                                     && !blockedUsersList.contains(student.getUserId())) {
