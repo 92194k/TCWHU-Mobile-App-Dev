@@ -32,7 +32,6 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
     private TextView previewAvatarText;
     private Button buttonConfirm;
 
-    // NEW: to distinguish who opened this activity
     private boolean isFromProfile = false;
 
     @Override
@@ -43,7 +42,6 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
         db = FirebaseFirestore.getInstance();
         userId = getIntent().getStringExtra("userId");
 
-        // NEW: detect if opened from profile
         isFromProfile = getIntent().getBooleanExtra("fromProfile", false);
 
         if (userId == null || userId.isEmpty()) {
@@ -68,13 +66,13 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
         buttonConfirm.setOnClickListener(v -> {
             if (selectedAvatar != null) {
                 if (isFromProfile) {
-                    // 👇 NEW: return the avatar result instead of navigating
+                    // Avatar Result
                     Intent resultIntent = new Intent();
                     resultIntent.putExtra("selectedAvatar", selectedAvatar);
                     setResult(RESULT_OK, resultIntent);
                     finish();
                 } else {
-                    // 👇 Sign-up flow: save avatar to Firestore then go to pending verification
+                    // Sign-up flow
                     saveAvatarToFirestoreAndProceed(selectedAvatar);
                 }
             } else {

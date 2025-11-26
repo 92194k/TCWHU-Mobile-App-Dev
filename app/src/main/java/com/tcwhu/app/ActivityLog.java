@@ -1,9 +1,8 @@
 package com.tcwhu.app;
 
 import com.google.firebase.firestore.Exclude;
-import java.io.Serializable; // <-- IMPORT ADDED
+import java.io.Serializable;
 
-// Implement Serializable to allow passing this object between activities
 public class ActivityLog implements Serializable {
     @Exclude private String id;
     private String adminId;
@@ -11,15 +10,15 @@ public class ActivityLog implements Serializable {
     private String targetId;
     private long timestamp;
 
-    public ActivityLog() {} // Required for Firestore
+    public ActivityLog() {}
 
-    // --- Getters ---
+    // Getters
     public String getId() { return id; }
     public String getAdminId() { return adminId; }
     public String getAction() { return action; }
     public String getTargetId() { return targetId; }
     public long getTimestamp() { return timestamp; }
 
-    // --- Setters ---
+    // Setters
     public void setId(String id) { this.id = id; }
 }

@@ -6,10 +6,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-public class Event implements Serializable { // <-- IMPLEMENTS SERIALIZABLE
+public class Event implements Serializable {
 
     @Exclude
-    private String id; // Firestore document ID
+    private String id;
 
     private String title;
     private String description;
@@ -29,7 +29,6 @@ public class Event implements Serializable { // <-- IMPLEMENTS SERIALIZABLE
         this.postedBy = postedBy;
     }
 
-    // Constructor with all fields
     public Event(String title, String description, long date, String imageUrl, String postedBy, String targetId, String icon) {
         this.title = title;
         this.description = description;

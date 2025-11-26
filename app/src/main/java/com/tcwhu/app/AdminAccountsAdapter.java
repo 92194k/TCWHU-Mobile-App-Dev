@@ -59,7 +59,6 @@ public class AdminAccountsAdapter extends RecyclerView.Adapter<AdminAccountsAdap
             SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy", Locale.US);
             textAddedDate.setText("Added: " + formatter.format(new Date(admin.getAddedDate())));
 
-            // Only allow removal if the admin is NOT the Super Admin
             if ("Super Admin".equalsIgnoreCase(admin.getRole())) {
                 buttonRemoveAdmin.setVisibility(View.GONE);
             } else {

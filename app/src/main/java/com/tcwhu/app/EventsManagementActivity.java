@@ -63,7 +63,7 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
     private ImageView dialogImagePreview = null;
     private AlertDialog currentDialog = null;
 
-    // --- Correct CropImage launcher for CanHub 4.x ---
+    // CropImage CanHub
     private final ActivityResultLauncher<CropImageContractOptions> cropImageLauncher =
             registerForActivityResult(new CropImageContract(), this::handleCropImageResult);
 

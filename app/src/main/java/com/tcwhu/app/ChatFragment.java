@@ -112,13 +112,11 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                         studentMap.put(doc.getId(), student);
                     }
 
-                    // --- CRITICAL FIX: Manually add the Admin to the map ---
                     Student adminUser = new Student();
                     adminUser.setNickname("System Admin");
                     adminUser.setAvatar("🛡️");
                     adminUser.setRole("admin");
                     studentMap.put(ReportsManagementActivity.ADMIN_USER_ID, adminUser);
-                    // --- END OF FIX ---
 
                     listenForChats();
                 })
@@ -152,7 +150,6 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                             }
                         }
 
-                        // Check if other user exists in map (including admin) and is not blocked
                         if (otherUserId != null && studentMap.containsKey(otherUserId) && !blockedUsersList.contains(otherUserId)) {
                             chatList.add(chat);
                         }

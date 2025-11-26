@@ -5,17 +5,14 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -99,7 +96,6 @@ public class AdminChatListActivity extends AppCompatActivity implements AdminCha
                     chatList.clear();
                     for (QueryDocumentSnapshot doc : snapshots) {
                         Chat chat = doc.toObject(Chat.class);
-                        // ✅ FIX 1: Store the Firestore document ID in the Chat object
                         chat.setChatId(doc.getId());
                         chatList.add(chat);
                     }
@@ -130,8 +126,7 @@ public class AdminChatListActivity extends AppCompatActivity implements AdminCha
             return;
         }
 
-        // ✅ FIX 2: Mark messages as read using the actual Firestore document ID
-        // Only mark as read if the last message was NOT sent by the admin AND it's currently unread
+        // Mark as read
         if (chat.getLastSenderId() != null
                 && !chat.getLastSenderId().equals(ReportsManagementActivity.ADMIN_USER_ID)
                 && !chat.isRead()) {

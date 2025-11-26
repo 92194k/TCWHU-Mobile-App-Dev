@@ -18,15 +18,13 @@ import java.util.Locale;
 
 public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.EventViewHolder> {
 
-    // --- ADDED: Interface for click listener ---
     public interface OnEventClickListener {
         void onEventClick(Event event);
     }
 
     private List<Event> eventList;
-    private OnEventClickListener clickListener; // ADDED
+    private OnEventClickListener clickListener;
 
-    // --- UPDATED: Constructor now accepts the listener ---
     public EventsAdapter(List<Event> eventList, OnEventClickListener clickListener) {
         this.eventList = eventList;
         this.clickListener = clickListener;
@@ -42,7 +40,7 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.EventViewH
     @Override
     public void onBindViewHolder(@NonNull EventViewHolder holder, int position) {
         Event event = eventList.get(position);
-        holder.bind(event, clickListener); // Pass listener to bind
+        holder.bind(event, clickListener);
     }
 
     @Override
@@ -63,7 +61,6 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.EventViewH
             eventPostedByTextView = itemView.findViewById(R.id.eventPostedByTextView);
         }
 
-        // --- UPDATED: Bind method now handles click ---
         public void bind(final Event event, final OnEventClickListener clickListener) {
             eventTitleTextView.setText(event.getTitle());
             eventDescriptionTextView.setText(event.getDescription());
@@ -86,7 +83,6 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.EventViewH
                 eventImageView.setImageDrawable(null);
             }
 
-            // --- ADDED: Set the click listener on the entire card ---
             itemView.setOnClickListener(v -> clickListener.onEventClick(event));
         }
     }

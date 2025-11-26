@@ -1,20 +1,40 @@
 package com.tcwhu.app;
 
 public class Message {
+
+    // Core Fields (Existing)
     private String senderId;
-    private String content;
-    private String type; // e.g., "text" or "image"
+    private String content; // Stores text or media URL
+    private String type;
     private long timestamp;
     private boolean seen;
 
-    // Required empty constructor for Firestore
+    // --- NEW FIELDS ADDED FOR FEATURES ---
+    private String messageId; // Unique ID from Firestore Document (Required for Deletion/Updates)
+    private String fileName;  // Display name for documents (e.g., "report.pdf")
+    private int status;       // 0: Active, 1: Deleted For Everyone (Placeholder)
+    // -------------------------------------
+
     public Message() {
-        this.seen = false; // Default to not seen
+        this.seen = false;      // Default to not seen
+        this.status = 0;        // Default to Active
     }
 
+    // --- Existing Getters ---
     public String getSenderId() { return senderId; }
     public String getContent() { return content; }
     public String getType() { return type; }
     public long getTimestamp() { return timestamp; }
     public boolean isSeen() { return seen; }
+
+    // --- NEW Getters ---
+    public String getMessageId() { return messageId; }
+    public String getFileName() { return fileName; }
+    public int getStatus() { return status; }
+
+    // --- NEW Setter (Crucial for Listener) ---
+    // The messageId must be set manually after fetching from Firestore snapshot.
+    public void setMessageId(String messageId) {
+        this.messageId = messageId;
+    }
 }

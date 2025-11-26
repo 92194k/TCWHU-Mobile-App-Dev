@@ -9,8 +9,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.firestore.FirebaseFirestore; // <-- MISSING
-import com.google.firebase.firestore.Query; // <-- MISSING
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 
 public class AdminLoginActivity extends AppCompatActivity {
 
@@ -20,15 +20,15 @@ public class AdminLoginActivity extends AppCompatActivity {
     private Button buttonAdminLogin;
     private Button buttonBackToStudent;
 
-    private FirebaseFirestore db; // <-- MISSING
-    private static final String ACCESS_CODE_DOC_ID = "GLOBAL_ACCESS_CODE"; // <-- MISSING
+    private FirebaseFirestore db;
+    private static final String ACCESS_CODE_DOC_ID = "GLOBAL_ACCESS_CODE";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_login);
 
-        db = FirebaseFirestore.getInstance(); // <-- MISSING
+        db = FirebaseFirestore.getInstance();
 
         // Find views
         toolbar = findViewById(R.id.toolbar);
@@ -37,13 +37,13 @@ public class AdminLoginActivity extends AppCompatActivity {
         buttonAdminLogin = findViewById(R.id.buttonAdminLogin);
         buttonBackToStudent = findViewById(R.id.buttonBackToStudent);
 
-        // Setup Toolbar
+        // Toolbar
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
-        // Setup button clicks
+        // Button clicks
         buttonAdminLogin.setOnClickListener(v -> handleAdminLogin());
         buttonBackToStudent.setOnClickListener(v -> finish());
     }
@@ -57,11 +57,10 @@ public class AdminLoginActivity extends AppCompatActivity {
             return;
         }
 
-        // 1. Check the global access code (FROM FIRESTORE)
+        // Check ACCESS CODE
         db.collection("settings").document(ACCESS_CODE_DOC_ID).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists() && accessCode.equals(doc.getString("code"))) {
-                        // Global access code is correct, now check if the username is a registered admin
                         checkAdminUsername(username);
                     } else {
                         Toast.makeText(this, "Incorrect username or password.", Toast.LENGTH_SHORT).show();
@@ -72,16 +71,13 @@ public class AdminLoginActivity extends AppCompatActivity {
                 });
     }
 
-    // <-- MISSING CHECK ADMIN USERNAME METHOD -->
     private void checkAdminUsername(String username) {
-        // 2. Query the 'admins' collection for the matching username (email)
         db.collection("admins").whereEqualTo("email", username).limit(1).get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (!querySnapshot.isEmpty()) {
-                        // Username (email) found in the admins collection
                         Toast.makeText(this, "Admin Login Successful!", Toast.LENGTH_SHORT).show();
 
-                        // Navigate to Admin Dashboard
+                        // To Admin Dashboard
                         Intent intent = new Intent(this, AdminDashboardActivity.class);
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);

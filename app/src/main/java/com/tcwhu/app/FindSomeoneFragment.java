@@ -137,7 +137,7 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
 
     private void loadCurrentUserProfile() {
         if (currentUserId == null) {
-            loadAllVerifiedStudents(); // No user, just load students
+            loadAllVerifiedStudents();
             return;
         }
         db.collection("users").document(currentUserId).get()
@@ -156,8 +156,6 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
     }
 
     private void loadAllVerifiedStudents() {
-        // --- CRITICAL FIX: Use the simple query ---
-        // We will filter out the admin in the code, which is safer and won't crash.
         db.collection("users")
                 .whereEqualTo("isVerified", true)
                 .whereEqualTo("isBanned", false)
@@ -170,10 +168,8 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
                             Student student = document.toObject(Student.class);
                             student.setUserId(document.getId());
 
-                            // --- CRITICAL FIX: Filter out admin role in code ---
-                            // This safely handles 'null' roles
                             if ("admin".equals(student.getRole())) {
-                                continue; // Skip this user, it's the admin
+                                continue;
                             }
 
                             if (currentUserId != null

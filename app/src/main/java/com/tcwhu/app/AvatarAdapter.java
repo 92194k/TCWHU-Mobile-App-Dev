@@ -23,8 +23,6 @@ public class AvatarAdapter extends RecyclerView.Adapter<AvatarAdapter.AvatarView
         this.listener = listener;
     }
 
-    // --- THIS IS THE MISSING METHOD --- ✅
-    // This allows other classes to safely get the current list of avatars.
     public List<String> getAvatarList() {
         return avatarList;
     }
@@ -44,7 +42,6 @@ public class AvatarAdapter extends RecyclerView.Adapter<AvatarAdapter.AvatarView
         if (position == selectedPosition) {
             holder.itemView.setBackgroundResource(R.drawable.bg_avatar_grid_item_selected);
         } else {
-            // It's better to use a drawable for the unselected state for consistency
             holder.itemView.setBackgroundResource(R.drawable.bg_avatar_grid_item_unselected);
         }
     }

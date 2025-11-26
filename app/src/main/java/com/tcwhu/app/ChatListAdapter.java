@@ -100,7 +100,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         }
 
         Student otherUser = studentMap.get(otherUserId);
-        holder.bind(otherUser, chat, listener, otherUserId, currentUserId); // Pass currentUserId
+        holder.bind(otherUser, chat, listener, otherUserId, currentUserId);
     }
 
     @Override
@@ -136,7 +136,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
                     textTime.setText("");
                 }
 
-                // --- CRITICAL FIX: Set BOLD for unread messages ---
+                // Bold Unread Messages
                 if (chat.getLastSenderId() != null && !chat.getLastSenderId().equals(currentUserId) && !chat.isRead()) {
                     // UNREAD: Make text bold and change color
                     textNickname.setTypeface(null, Typeface.BOLD);

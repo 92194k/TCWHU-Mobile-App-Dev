@@ -18,7 +18,6 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
-// --- IMPLEMENT THE NEW INTERFACE ---
 public class EventsFragment extends Fragment implements EventsAdapter.OnEventClickListener {
 
     private RecyclerView eventsRecyclerView;
@@ -54,7 +53,6 @@ public class EventsFragment extends Fragment implements EventsAdapter.OnEventCli
 
     private void setupRecyclerView() {
         eventList = new ArrayList<>();
-        // --- UPDATED: Pass 'this' as the click listener ---
         eventsAdapter = new EventsAdapter(eventList, this);
         eventsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         eventsRecyclerView.setAdapter(eventsAdapter);
@@ -70,7 +68,7 @@ public class EventsFragment extends Fragment implements EventsAdapter.OnEventCli
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             Event event = document.toObject(Event.class);
                             if (event.getTitle() != null) {
-                                event.setId(document.getId()); // Set the ID
+                                event.setId(document.getId());
                                 eventList.add(event);
                             }
                         }
@@ -94,7 +92,6 @@ public class EventsFragment extends Fragment implements EventsAdapter.OnEventCli
         }
     }
 
-    // --- ADDED: Implementation for the click listener ---
     @Override
     public void onEventClick(Event event) {
         Intent intent = new Intent(getActivity(), EventDetailActivity.class);

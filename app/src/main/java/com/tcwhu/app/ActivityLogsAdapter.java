@@ -17,8 +17,6 @@ public class ActivityLogsAdapter extends RecyclerView.Adapter<ActivityLogsAdapte
 
     private List<ActivityLog> logList;
 
-    // NOTE: Assuming you want to keep the OnItemClickListener interface if you use it later.
-    // If not used, you can simplify the constructor. Keeping it here for full compatibility.
     public interface OnItemClickListener {
         void onItemClick(ActivityLog log);
     }
@@ -62,24 +60,23 @@ public class ActivityLogsAdapter extends RecyclerView.Adapter<ActivityLogsAdapte
 
         private String safeTrim(String text) {
             if (text == null) return "";
-            // Assuming adminId might be long Firebase UID or a short nickname
             return text.length() > 20 ? text.substring(0, 20) + "..." : text;
         }
 
         public void bind(final ActivityLog log, final OnItemClickListener listener) {
-            // Get the Admin's full name/nickname (stored in adminId field)
+            // Get Admin Nickname
             String adminNickname = log.getAdminId();
 
-            // Display main info
+            // Main info
             textAction.setText(log.getAction());
             // CRITICAL FIX: Display the actual nickname
             textAdminId.setText("Logged by: " + adminNickname);
 
-            // Format timestamp
+            // Timestamp
             SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy, h:mm a", Locale.US);
             textTimestamp.setText(formatter.format(new Date(log.getTimestamp())));
 
-            // Set icons dynamically (unchanged)
+            // Set Icons
             String action = log.getAction().toLowerCase();
             if (action.contains("ban") || action.contains("suspend")) {
                 textLogIcon.setText("🚫");
@@ -91,7 +88,7 @@ public class ActivityLogsAdapter extends RecyclerView.Adapter<ActivityLogsAdapte
                 textLogIcon.setText("📝");
             }
 
-            // Show Target ID if applicable (unchanged)
+            // Show Target ID
             if (log.getTargetId() != null && !log.getTargetId().isEmpty()) {
                 textTargetId.setText("Target ID: " + safeTrim(log.getTargetId()));
                 textTargetId.setVisibility(View.VISIBLE);
@@ -99,7 +96,6 @@ public class ActivityLogsAdapter extends RecyclerView.Adapter<ActivityLogsAdapte
                 textTargetId.setVisibility(View.GONE);
             }
 
-            // Click listener (for future detail view)
             itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onItemClick(log);
             });

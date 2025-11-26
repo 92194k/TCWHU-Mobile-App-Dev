@@ -32,13 +32,13 @@ public class AdminDashboardActivity extends AppCompatActivity {
             finish();
         });
 
-        // Add the management cards
+        // Management Cards
         addManagementCard(managementGrid, "Student Verification", R.drawable.ic_check_circle, StudentVerificationActivity.class);
         addManagementCard(managementGrid, "Reports Management", R.drawable.ic_report, ReportsManagementActivity.class);
         addManagementCard(managementGrid, "Events Management", R.drawable.ic_events, EventsManagementActivity.class);
         addManagementCard(managementGrid, "User Overview", R.drawable.ic_users, UserOverviewActivity.class);
 
-        // --- ADDED: New "Support Inbox" card ---
+        // Bagong Support Inbox Card
         addManagementCard(managementGrid, "Support Inbox", R.drawable.ic_chat, AdminChatListActivity.class);
 
         addManagementCard(managementGrid, "Activity Logs", R.drawable.ic_logs, ActivityLogsActivity.class);

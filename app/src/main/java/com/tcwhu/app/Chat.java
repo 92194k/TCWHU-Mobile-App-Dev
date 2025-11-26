@@ -6,7 +6,6 @@ import java.util.List;
 
 public class Chat {
 
-    // The Firestore document ID (must be excluded from standard mapping)
     @Exclude
     private String chatId;
 
@@ -16,13 +15,11 @@ public class Chat {
     private String lastSenderId;
     private boolean read;
 
-    // --- NEW FIELD: Tracks if the student has clicked "Confirm" or "Appeal" ---
     private boolean warningAcknowledged;
 
-    // Required empty constructor for Firestore
     public Chat() {}
 
-    // --- GETTERS ---
+    // Getters
 
     @Exclude
     public String getChatId() { return chatId; }
@@ -32,15 +29,13 @@ public class Chat {
     public List<String> getUsers() { return users; }
     public String getLastSenderId() { return lastSenderId; }
 
-    // Use @PropertyName to correctly map Firestore fields, even if named differently (e.g., 'isRead' or 'read')
     @PropertyName("read")
     public boolean isRead() { return read; }
 
-    // --- NEW FIELD GETTER ---
     @PropertyName("warningAcknowledged")
     public boolean isWarningAcknowledged() { return warningAcknowledged; }
 
-    // --- SETTERS (Crucial for AdminChatListActivity and general data manipulation) ---
+    // SETTERS
 
     @Exclude
     public void setChatId(String chatId) {
@@ -68,7 +63,6 @@ public class Chat {
         this.read = read;
     }
 
-    // --- NEW FIELD SETTER ---
     @PropertyName("warningAcknowledged")
     public void setWarningAcknowledged(boolean warningAcknowledged) {
         this.warningAcknowledged = warningAcknowledged;

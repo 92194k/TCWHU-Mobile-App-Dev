@@ -12,7 +12,6 @@ import java.util.Locale;
 
 public class ActivityLogDetailActivity extends AppCompatActivity {
 
-    // Key to pass the log object
     public static final String EXTRA_LOG = "extra_log";
 
     @Override
@@ -27,27 +26,23 @@ public class ActivityLogDetailActivity extends AppCompatActivity {
         }
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
-        // Find all TextViews
         TextView textAction = findViewById(R.id.textDetailAction);
         TextView textAdminId = findViewById(R.id.textDetailAdminId);
         TextView textTimestamp = findViewById(R.id.textDetailTimestamp);
         TextView textTargetId = findViewById(R.id.textDetailTargetId);
         TextView textTargetIdLabel = findViewById(R.id.textDetailTargetIdLabel);
 
-        // Get the ActivityLog object from the Intent
         ActivityLog log = (ActivityLog) getIntent().getSerializableExtra(EXTRA_LOG);
 
         if (log != null) {
-            // Populate the views
             textAction.setText(log.getAction());
             textAdminId.setText(log.getAdminId());
 
-            // Format the timestamp
+            // Timestamp
             SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy, h:mm:ss a", Locale.US);
             String dateString = formatter.format(new Date(log.getTimestamp()));
             textTimestamp.setText(dateString);
 
-            // Show or hide the Target ID
             if (log.getTargetId() != null && !log.getTargetId().isEmpty()) {
                 textTargetId.setText(log.getTargetId());
                 textTargetId.setVisibility(View.VISIBLE);

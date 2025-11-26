@@ -93,7 +93,7 @@ public class AdminChatListAdapter extends RecyclerView.Adapter<AdminChatListAdap
                 textTime.setText("");
             }
 
-            // ✅ CORRECT LOGIC: BOLD if UNREAD, normal if READ
+            // Unread (naka bold), Read (dili naka bold)
             boolean isUnread = chat.getLastSenderId() != null
                     && !chat.getLastSenderId().equals(adminId)
                     && !chat.isRead();

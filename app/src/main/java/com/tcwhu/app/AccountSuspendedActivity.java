@@ -3,7 +3,7 @@ package com.tcwhu.app;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
-import android.widget.TextView; // <-- ADDED
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -12,7 +12,7 @@ import com.google.firebase.auth.FirebaseAuth;
 public class AccountSuspendedActivity extends AppCompatActivity {
 
     private Button buttonLogout;
-    private TextView textStatusMessage, textStatusTitle; // <-- ADDED textStatusTitle
+    private TextView textStatusMessage, textStatusTitle;
     private FirebaseAuth mAuth;
 
     @Override
@@ -22,23 +22,22 @@ public class AccountSuspendedActivity extends AppCompatActivity {
 
         buttonLogout = findViewById(R.id.buttonLogout);
         textStatusMessage = findViewById(R.id.textStatusMessage);
-        textStatusTitle = findViewById(R.id.textStatusTitle); // <-- ADDED
+        textStatusTitle = findViewById(R.id.textStatusTitle);
         mAuth = FirebaseAuth.getInstance();
 
-        // Get the message from SplashActivity or LoginActivity
+        // Get Message from SplashActivity or LoginActivity
         String message = getIntent().getStringExtra("STATUS_MESSAGE");
         if (message != null && !message.isEmpty()) {
             textStatusMessage.setText(message);
 
-            // --- ADDED: Set a custom title based on the message ---
             if (message.contains("banned")) {
-                textStatusTitle.setText("Account Banned");
+                textStatusTitle.setText("Your Account Has Been Banned");
             } else if (message.contains("suspended")) {
-                textStatusTitle.setText("Account Suspended");
+                textStatusTitle.setText("Your Account is Temporarily Suspended");
             } else if (message.contains("deletion")) {
-                textStatusTitle.setText("Deletion Requested");
+                textStatusTitle.setText("Your Account Deletion Request is Pending");
             }
-            // --- END OF ADDED CODE ---
+
         }
 
         buttonLogout.setOnClickListener(v -> {

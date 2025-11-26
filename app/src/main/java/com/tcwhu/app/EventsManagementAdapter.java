@@ -18,14 +18,13 @@ import java.util.function.Consumer;
 
 public class EventsManagementAdapter extends RecyclerView.Adapter<EventsManagementAdapter.ViewHolder> {
 
-    // --- UPDATED: Interface now handles clicks AND deletes ---
     public interface OnEventActionListener {
         void onEventClick(Event event);
         void onDelete(Event event);
     }
 
     private final List<Event> events;
-    private final OnEventActionListener listener; // Changed from Consumer
+    private final OnEventActionListener listener;
 
     public EventsManagementAdapter(List<Event> events, OnEventActionListener listener) {
         this.events = events;
@@ -43,7 +42,7 @@ public class EventsManagementAdapter extends RecyclerView.Adapter<EventsManageme
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Event event = events.get(position);
-        holder.bind(event, listener); // Pass listener to bind
+        holder.bind(event, listener);
     }
 
     @Override
@@ -97,14 +96,12 @@ public class EventsManagementAdapter extends RecyclerView.Adapter<EventsManageme
                 eventImage.setVisibility(View.GONE);
             }
 
-            // --- Click Listeners ---
             deleteButton.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onDelete(event);
                 }
             });
 
-            // --- ADDED: Click listener for the whole card ---
             itemView.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onEventClick(event);

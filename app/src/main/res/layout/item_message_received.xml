@@ -34,6 +34,88 @@
             android:textColor="?attr/colorOnSurface"
             android:textSize="15sp"
             tools:text="This is a received message"/>
+
+        <TextView
+            android:id="@+id/textDeletedStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="[This message was deleted]"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textStyle="italic"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp"
+            android:visibility="gone"
+            />
+        <LinearLayout
+            android:id="@+id/fileContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/iconFile"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_file_document"
+                android:contentDescription="Document Icon"
+                android:layout_marginEnd="8dp"/>
+
+            <TextView
+                android:id="@+id/textFileName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorOnSurface"
+                android:text="document_name.pdf"
+                android:maxLines="1"
+                android:ellipsize="middle"
+                android:layout_marginEnd="16dp"/>
+
+            <ImageView
+                android:id="@+id/iconFileDownload"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:padding="4dp"
+                android:src="@drawable/ic_download"
+                android:contentDescription="Download File"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"/>
+
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/audioContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/iconAudioPlay"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_play_arrow"
+                android:contentDescription="Play Voice Message"
+                android:background="@drawable/rounded_circle_background"
+                android:tint="@android:color/black"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <TextView
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                android:text="— 0:05 / 0:15 —"
+                android:textColor="?android:attr/textColorSecondary"
+                android:layout_marginStart="8dp"/>
+
+        </LinearLayout>
     </LinearLayout>
 
     <TextView

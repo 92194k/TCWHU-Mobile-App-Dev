@@ -28,7 +28,7 @@ public class EventDetailActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(""); // We want the title to collapse, not be static
+            getSupportActionBar().setTitle("");
         }
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
@@ -38,7 +38,6 @@ public class EventDetailActivity extends AppCompatActivity {
         detailEventPostedBy = findViewById(R.id.detailEventPostedBy);
         detailEventDescription = findViewById(R.id.detailEventDescription);
 
-        // Get the Event object from the Intent
         Event event = (Event) getIntent().getSerializableExtra(EXTRA_EVENT);
 
         if (event == null) {
@@ -67,7 +66,6 @@ public class EventDetailActivity extends AppCompatActivity {
                     .centerCrop()
                     .into(detailEventImage);
         } else {
-            // Set a default image if none provided
             detailEventImage.setImageResource(R.drawable.ic_events);
         }
     }
