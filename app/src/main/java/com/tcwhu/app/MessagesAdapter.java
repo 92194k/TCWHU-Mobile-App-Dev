@@ -178,7 +178,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
             // --- DELETION LOGIC (Status 1) ---
             if (message.getStatus() == 1) {
                 if (textDeletedStatus != null) {
-                    textDeletedStatus.setText("[This message was deleted]");
+                    textDeletedStatus.setText("Message deleted");
                     textDeletedStatus.setVisibility(View.VISIBLE);
                     textTimestamp.setVisibility(View.GONE);
                     itemView.setOnLongClickListener(null); // Disable long press on deleted message

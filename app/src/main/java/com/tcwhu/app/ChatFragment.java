@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import android.util.Log;
 
 public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSelectedListener {
 
@@ -123,6 +124,8 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                 .addOnFailureListener(e -> Toast.makeText(getContext(), "Error loading user data.", Toast.LENGTH_SHORT).show());
     }
 
+// In ChatFragment.java
+
     private void listenForChats() {
         if (currentUserId == null) return;
 
@@ -131,18 +134,24 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
         if (chatListListener != null) chatListListener.remove();
 
         chatListListener = chatsRef
+                // 1. Query: Fetch ALL chats where the current user is in the 'users' list.
+                // This is the only array query we need for the listener.
                 .whereArrayContains("users", currentUserId)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshots, e) -> {
-                    if (e != null || snapshots == null) return;
+                    if (e != null || snapshots == null) {
+                        Log.e("ChatFragment", "Listen failed: " + e.getMessage());
+                        return;
+                    }
 
                     chatList.clear();
+
                     for (QueryDocumentSnapshot doc : snapshots) {
                         Chat chat = doc.toObject(Chat.class);
 
                         String otherUserId = null;
-                        if(chat.getUsers() != null) {
-                            for(String id : chat.getUsers()) {
+                        if (chat.getUsers() != null) {
+                            for (String id : chat.getUsers()) {
                                 if (!id.equals(currentUserId)) {
                                     otherUserId = id;
                                     break;
@@ -150,7 +159,19 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                             }
                         }
 
-                        if (otherUserId != null && studentMap.containsKey(otherUserId) && !blockedUsersList.contains(otherUserId)) {
+                        // 2. Client-Side Filter: Check for soft deletion status
+                        // If 'deletedBy' list is null or doesn't contain the currentUserId, the chat is visible.
+                        boolean isSoftDeletedByMe = chat.getDeletedBy() != null
+                                && chat.getDeletedBy().contains(currentUserId);
+
+                        // 3. Final Check and Add
+                        if (otherUserId != null
+                                && studentMap.containsKey(otherUserId)
+                                && !blockedUsersList.contains(otherUserId)
+                                && !isSoftDeletedByMe) { // <-- Only add if NOT soft-deleted
+
+                            // Set the Chat ID for the Chat object, as it's excluded during toObject()
+                            chat.setChatId(doc.getId());
                             chatList.add(chat);
                         }
                     }

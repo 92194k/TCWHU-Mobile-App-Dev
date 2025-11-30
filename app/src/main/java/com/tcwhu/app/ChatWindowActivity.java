@@ -445,9 +445,17 @@ public class ChatWindowActivity extends AppCompatActivity {
                                 Toast.LENGTH_SHORT).show();
                     }
 
-                    @Override public void onStart(String r) {}
-                    @Override public void onProgress(String r, long b, long t) {}
-                    @Override public void onReschedule(String r, ErrorInfo e) {}
+                    @Override
+                    public void onStart(String r) {
+                    }
+
+                    @Override
+                    public void onProgress(String r, long b, long t) {
+                    }
+
+                    @Override
+                    public void onReschedule(String r, ErrorInfo e) {
+                    }
                 }).dispatch();
     }
 
@@ -481,6 +489,7 @@ public class ChatWindowActivity extends AppCompatActivity {
     /**
      * Public method called by MessagesAdapter on long-press.
      * Shows context-specific options (Delete for sent, Report for received).
+     *
      * @param message The message that was long-pressed.
      */
     public void showMessageOptions(Message message) {
@@ -556,7 +565,7 @@ public class ChatWindowActivity extends AppCompatActivity {
 
                         // Option 1: Update status to 1 (Deleted placeholder)
                         docRef.update("status", 1)
-                                .addOnSuccessListener(v -> Toast.makeText(this, "Message deleted (placeholder).", Toast.LENGTH_SHORT).show())
+                                .addOnSuccessListener(v -> Toast.makeText(this, "Message deleted.", Toast.LENGTH_SHORT).show())
                                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to update message status.", Toast.LENGTH_SHORT).show());
 
                         // NOTE: If you intended a full deletion, uncomment the lines below and comment out the update above:
@@ -686,27 +695,77 @@ public class ChatWindowActivity extends AppCompatActivity {
                         Toast.makeText(this, "Failed.", Toast.LENGTH_SHORT).show());
     }
 
-    private void deleteConversation() {
-        CollectionReference messagesRef =
-                db.collection("chats").document(chatId).collection("messages");
+// In ChatWindowActivity.java
 
+    private void deleteConversation() {
+        DocumentReference chatRef = db.collection("chats").document(chatId);
+
+        chatRef.get().addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                Chat chat = doc.toObject(Chat.class);
+                if (chat == null) return;
+
+                // Check if the other user has already deleted it (DeletedBy list contains otherUserId)
+                String otherUser = chat.getUsers().stream()
+                        .filter(id -> !id.equals(currentUserId))
+                        .findFirst()
+                        .orElse(null);
+
+                boolean otherUserAlreadyDeleted = chat.getDeletedBy() != null && chat.getDeletedBy().contains(otherUser);
+
+                if (otherUserAlreadyDeleted) {
+                    // Hard Delete: If both users have deleted, delete the document and subcollection entirely.
+                    // NOTE: The current Hard Delete logic you had is correct for this case.
+                    performHardDelete(chatRef.collection("messages"));
+                } else {
+                    // Soft Delete: Just mark this conversation as deleted for the current user.
+                    performSoftDelete(chatRef);
+                }
+
+            } else {
+                // Document doesn't exist (already deleted)
+                Toast.makeText(this, "Conversation not found.", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        }).addOnFailureListener(e -> {
+            Toast.makeText(this, "Failed to check chat status.", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+// --- NEW HELPER METHODS ---
+
+    private void performSoftDelete(DocumentReference chatRef) {
+        // Atomically add the current user's ID to the deletedBy array
+        chatRef.update("deletedBy", FieldValue.arrayUnion(currentUserId))
+                .addOnSuccessListener(v -> {
+                    Toast.makeText(this, "Conversation archived.", Toast.LENGTH_SHORT).show();
+                    finish();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed to archive.", Toast.LENGTH_SHORT).show());
+    }
+
+    private void performHardDelete(CollectionReference messagesRef) {
+        // This is the HARD DELETE logic, executed only when BOTH users have soft-deleted it.
         messagesRef.get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 WriteBatch batch = db.batch();
 
+                // 1. Delete all messages (subcollection)
                 for (QueryDocumentSnapshot doc : task.getResult()) {
                     batch.delete(doc.getReference());
                 }
 
+                // 2. Delete the parent chat document
                 batch.delete(db.collection("chats").document(chatId));
 
                 batch.commit()
                         .addOnSuccessListener(v -> {
-                            Toast.makeText(this, "Conversation deleted.", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Conversation permanently deleted.", Toast.LENGTH_SHORT).show();
                             finish();
                         })
                         .addOnFailureListener(e ->
-                                Toast.makeText(this, "Failed to delete.", Toast.LENGTH_SHORT).show());
+                                Toast.makeText(this, "Failed to delete permanently.", Toast.LENGTH_SHORT).show());
             } else {
                 Toast.makeText(this, "Failed to fetch messages for deletion.", Toast.LENGTH_SHORT).show();
             }

@@ -14,8 +14,10 @@ public class Chat {
     private List<String> users;
     private String lastSenderId;
     private boolean read;
-
     private boolean warningAcknowledged;
+
+    // --- NEW FIELD FOR SOFT DELETE ---
+    private List<String> deletedBy; // List of user IDs who have soft-deleted the conversation
 
     public Chat() {}
 
@@ -34,6 +36,10 @@ public class Chat {
 
     @PropertyName("warningAcknowledged")
     public boolean isWarningAcknowledged() { return warningAcknowledged; }
+
+    // --- NEW GETTER ---
+    public List<String> getDeletedBy() { return deletedBy; }
+
 
     // SETTERS
 
@@ -66,5 +72,10 @@ public class Chat {
     @PropertyName("warningAcknowledged")
     public void setWarningAcknowledged(boolean warningAcknowledged) {
         this.warningAcknowledged = warningAcknowledged;
+    }
+
+    // --- NEW SETTER ---
+    public void setDeletedBy(List<String> deletedBy) {
+        this.deletedBy = deletedBy;
     }
 }
