@@ -108,12 +108,23 @@
                 android:clickable="true"
                 android:focusable="true"/>
 
-            <TextView
+            <SeekBar
+                android:id="@+id/audioSeekBar"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:text="— 0:05 / 0:15 —"
-                android:textColor="?android:attr/textColorSecondary"
-                android:layout_marginStart="8dp"/>
+                android:layout_marginStart="8dp"
+                android:thumbTint="?attr/colorOnSurface"
+                android:progressTint="?attr/colorOnSurface"
+                android:progressBackgroundTint="?android:attr/textColorSecondary"
+                android:paddingVertical="10dp"
+                android:layout_marginEnd="8dp"/>
+
+            <TextView
+                android:id="@+id/textAudioDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorOnSurface"
+                tools:text="0:25"/>
 
         </LinearLayout>
     </LinearLayout>

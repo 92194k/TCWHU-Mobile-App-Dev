@@ -64,17 +64,21 @@ public class StudentSignUpActivity extends AppCompatActivity {
     private void registerUserAndProceedToPhotoUpload() {
         String studentNumber = inputStudentNumber.getText().toString().trim();
         String password = inputPassword.getText().toString().trim();
-        String emailForAuth = studentNumber + "@tcwhu.app";
+
+        // --- CRITICAL CHANGE 1: Use the user's REAL email for Firebase Auth ---
         String actualEmail = inputEmail.getText().toString().trim();
 
-        mAuth.createUserWithEmailAndPassword(emailForAuth, password)
+        mAuth.createUserWithEmailAndPassword(actualEmail, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         FirebaseUser firebaseUser = mAuth.getCurrentUser();
                         if (firebaseUser != null) {
                             Map<String, Object> userData = new HashMap<>();
+
+                            // --- CRITICAL CHANGE 2: Save the studentNumber separately in Firestore ---
                             userData.put("studentNumber", studentNumber);
-                            userData.put("email", actualEmail);
+                            userData.put("email", actualEmail); // Also save the real email
+
                             userData.put("nickname", inputNickname.getText().toString().trim());
                             userData.put("yearLevel", inputYearLevel.getText().toString().trim());
                             userData.put("interests", inputInterests.getText().toString().trim());

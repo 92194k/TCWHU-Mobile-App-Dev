@@ -13,8 +13,8 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
@@ -41,8 +41,12 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         db = FirebaseFirestore.getInstance();
-        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
-            currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            currentUserId = user.getUid();
+        } else {
+            // If user is null here, navigation should have failed earlier.
+            // We keep currentUserId null to prevent db calls.
         }
     }
 
@@ -65,7 +69,13 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
     @Override
     public void onResume() {
         super.onResume();
-        loadCurrentUserProfile();
+        if (currentUserId != null) {
+            loadCurrentUserProfile();
+        } else if (getContext() != null) {
+            // Handle case where user is not logged in but somehow reached this fragment
+            Toast.makeText(getContext(), "User not logged in.", Toast.LENGTH_LONG).show();
+            checkIfEmpty();
+        }
     }
 
     @Override
@@ -133,7 +143,6 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
         if (chatListListener != null) chatListListener.remove();
 
         chatListListener = chatsRef
-                // 1. Query: Fetch ALL chats where the current user is in the 'users' list.
                 .whereArrayContains("users", currentUserId)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshots, e) -> {
@@ -157,18 +166,14 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                             }
                         }
 
-                        // 2. Client-Side Filter: Check for soft deletion status using the Map
-                        // If the 'deletedAt' map contains the currentUserId as a key, the chat is hidden.
                         boolean isSoftDeletedByMe = chat.getDeletedAt() != null
                                 && chat.getDeletedAt().containsKey(currentUserId);
 
-                        // 3. Final Check and Add
                         if (otherUserId != null
-                                && studentMap.containsKey(otherUserId)
+                                && studentMap.containsKey(otherUserId) // CRITICAL: Only process if user map is complete
                                 && !blockedUsersList.contains(otherUserId)
-                                && !isSoftDeletedByMe) { // <-- Only add if NOT soft-deleted
+                                && !isSoftDeletedByMe) {
 
-                            // Set the Chat ID for the Chat object, as it's excluded during toObject()
                             chat.setChatId(doc.getId());
                             chatList.add(chat);
                         }

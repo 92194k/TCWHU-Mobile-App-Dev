@@ -3,11 +3,14 @@ package com.tcwhu.app;
 import android.content.Context;
 import android.content.Intent;
 import android.media.MediaPlayer;
+import android.os.Handler; // <--- ADDED
+import android.os.Looper; // <--- ADDED
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.SeekBar; // <--- ADDED
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -38,6 +41,29 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     private MediaPlayer mediaPlayer;
     private MessageViewHolder currentAudioHolder = null;
     private String currentlyPlayingUrl = null;
+    private final Handler playbackHandler = new Handler(Looper.getMainLooper()); // <--- ADDED HANDLER
+
+    // Runnable for updating the progress bar and time text
+    private final Runnable updatePlaybackProgress = new Runnable() {
+        @Override
+        public void run() {
+            if (mediaPlayer != null && mediaPlayer.isPlaying() && currentAudioHolder != null) {
+                int currentPosition = mediaPlayer.getCurrentPosition();
+                int duration = mediaPlayer.getDuration();
+
+                // Set max duration for SeekBar (in milliseconds)
+                currentAudioHolder.audioSeekBar.setMax(duration);
+                currentAudioHolder.audioSeekBar.setProgress(currentPosition);
+
+                // Update time display: 0:0X / 0:YY
+                currentAudioHolder.textAudioDuration.setText(
+                        formatDuration(currentPosition) + " / " + formatDuration(duration)
+                );
+
+                playbackHandler.postDelayed(this, 100); // Update every 100ms
+            }
+        }
+    };
     // ---------------------------------
 
     /**
@@ -50,6 +76,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     }
 
     public void cleanup() {
+        playbackHandler.removeCallbacks(updatePlaybackProgress); // <--- CLEANUP HANDLER
         if (mediaPlayer != null) {
             mediaPlayer.stop();
             mediaPlayer.release();
@@ -98,16 +125,31 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
             mediaPlayer.setDataSource(url);
             mediaPlayer.prepareAsync();
 
-            // NOTE: Assuming R.drawable.ic_pause exists
             holder.iconAudioPlay.setImageResource(R.drawable.ic_pause);
             currentAudioHolder = holder;
             currentlyPlayingUrl = url;
 
             mediaPlayer.setOnPreparedListener(mp -> {
                 mp.start();
+
+                // Use the duration from the MediaPlayer after preparation
+                int duration = mp.getDuration();
+                currentAudioHolder.audioSeekBar.setMax(duration);
+                currentAudioHolder.audioSeekBar.setProgress(0);
+
+                // Display the correct full duration immediately (0:00 / 0:XX)
+                currentAudioHolder.textAudioDuration.setText(
+                        formatDuration(0) + " / " + formatDuration(duration)
+                );
+
+                playbackHandler.post(updatePlaybackProgress); // Start progress updates
             });
 
             mediaPlayer.setOnCompletionListener(mp -> {
+                // Reset UI on completion
+                currentAudioHolder.audioSeekBar.setProgress(0);
+                // Display only the total duration (0:XX)
+                currentAudioHolder.textAudioDuration.setText(formatDuration(currentAudioHolder.message.getMediaDuration()));
                 stopPlayback();
             });
 
@@ -118,24 +160,52 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     }
 
     public void stopPlayback() {
+        playbackHandler.removeCallbacks(updatePlaybackProgress); // Stop progress updates
+
         if (mediaPlayer != null) {
             mediaPlayer.stop();
             mediaPlayer.release();
             mediaPlayer = null;
         }
         if (currentAudioHolder != null) {
-            // NOTE: Assuming R.drawable.ic_play_arrow exists
             currentAudioHolder.iconAudioPlay.setImageResource(R.drawable.ic_play_arrow);
+            // On stop, reset progress bar and display end time
+            currentAudioHolder.audioSeekBar.setProgress(0);
+            currentAudioHolder.textAudioDuration.setText(formatDuration(currentAudioHolder.message.getMediaDuration()));
             currentAudioHolder = null;
         }
         currentlyPlayingUrl = null;
     }
 
-    // --- Updated ViewHolder Class ---
+    /**
+     * Formats duration in milliseconds to "m:ss" or "mm:ss"
+     */
+    private String formatDuration(long durationMillis) {
+        int totalSeconds = (int) (durationMillis / 1000);
+        int seconds = totalSeconds % 60;
+        int minutes = totalSeconds / 60;
+
+        if (minutes > 0) {
+            return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds);
+        } else {
+            return String.format(Locale.getDefault(), "0:%02d", seconds);
+        }
+    }
+
+    // --- MessageViewHolder Class ---
     static class MessageViewHolder extends RecyclerView.ViewHolder {
+        // --- TEXT/IMAGE UI ---
         TextView messageText, textTimestamp, textFileName, textDeletedStatus;
-        ImageView messageImage, iconSeenStatus, iconFileDownload, iconAudioPlay;
-        LinearLayout fileContainer, audioContainer, mediaContainer; // mediaContainer added for audio/video
+        ImageView messageImage, iconSeenStatus, iconFileDownload;
+        LinearLayout fileContainer;
+
+        // --- AUDIO UI ---
+        TextView textAudioDuration; // <--- DURATION TEXT VIEW
+        ImageView iconAudioPlay;
+        LinearLayout audioContainer;
+        SeekBar audioSeekBar; // <--- SEEKBAR
+
+        Message message;
 
         private final MessagesAdapter adapter;
         private final MessageOptionHandler messageOptionHandler;
@@ -145,34 +215,72 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
             this.adapter = adapter;
             this.messageOptionHandler = messageOptionHandler;
 
+            // --- Find Common Views ---
             messageText = itemView.findViewById(R.id.messageText);
             messageImage = itemView.findViewById(R.id.messageImage);
             textTimestamp = itemView.findViewById(R.id.textTimestamp);
             iconSeenStatus = itemView.findViewById(R.id.iconSeenStatus);
-
             fileContainer = itemView.findViewById(R.id.fileContainer);
             textFileName = itemView.findViewById(R.id.textFileName);
             iconFileDownload = itemView.findViewById(R.id.iconFileDownload);
+            textDeletedStatus = itemView.findViewById(R.id.textDeletedStatus);
+
+            // --- Find Audio Views ---
             audioContainer = itemView.findViewById(R.id.audioContainer);
             iconAudioPlay = itemView.findViewById(R.id.iconAudioPlay);
-            textDeletedStatus = itemView.findViewById(R.id.textDeletedStatus);
-            // Assuming mediaContainer can be found for audio/video if separate from fileContainer
-            // mediaContainer = itemView.findViewById(R.id.mediaContainer);
+            audioSeekBar = itemView.findViewById(R.id.audioSeekBar);
+            textAudioDuration = itemView.findViewById(R.id.textAudioDuration);
+
+            // --- SEEKBAR LISTENER ---
+            if (audioSeekBar != null) {
+                audioSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        if (message == null) return; // Check added for safety during binding
+
+                        long totalDuration = message.getMediaDuration();
+
+                        if (fromUser && adapter.mediaPlayer != null && adapter.currentAudioHolder == MessageViewHolder.this) {
+                            // User is dragging and this is the currently playing message
+                            adapter.mediaPlayer.seekTo(progress);
+                            textAudioDuration.setText(adapter.formatDuration(progress) + " / " + adapter.formatDuration(totalDuration));
+                        } else if (fromUser) {
+                            // User is dragging a seekbar on a non-playing message
+                            textAudioDuration.setText(adapter.formatDuration(progress) + " / " + adapter.formatDuration(totalDuration));
+                        }
+                    }
+
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {
+                        if (adapter.mediaPlayer != null && adapter.currentAudioHolder == MessageViewHolder.this) {
+                            adapter.playbackHandler.removeCallbacks(adapter.updatePlaybackProgress);
+                        }
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {
+                        if (adapter.mediaPlayer != null && adapter.currentAudioHolder == MessageViewHolder.this) {
+                            adapter.playbackHandler.post(adapter.updatePlaybackProgress);
+                        }
+                    }
+                });
+            }
+            // ------------------------
         }
 
         public void bind(Message message, int viewType) {
+            this.message = message; // Store for duration access
 
             // Reset all containers to GONE
             messageText.setVisibility(View.GONE);
             messageImage.setVisibility(View.GONE);
             if (fileContainer != null) fileContainer.setVisibility(View.GONE);
             if (audioContainer != null) audioContainer.setVisibility(View.GONE);
-            // if (mediaContainer != null) mediaContainer.setVisibility(View.GONE); // If used
             if (textDeletedStatus != null) textDeletedStatus.setVisibility(View.GONE);
             textTimestamp.setVisibility(View.VISIBLE);
             if (iconSeenStatus != null) iconSeenStatus.setVisibility(View.GONE);
 
-            // Set up long press listener for options (like single message deletion)
+            // Set up long press listener for options
             if (message.getStatus() == 0) {
                 itemView.setOnLongClickListener(v -> {
                     messageOptionHandler.showMessageOptions(message);
@@ -188,17 +296,17 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
                     textDeletedStatus.setText("Message deleted");
                     textDeletedStatus.setVisibility(View.VISIBLE);
                     textTimestamp.setVisibility(View.GONE);
-                    itemView.setOnLongClickListener(null); // Ensure no options on deleted messages
+                    itemView.setOnLongClickListener(null);
                     return;
                 }
             }
 
-            // --- MEDIA/FILE TYPE HANDLING (for active messages only) ---
+            // --- MEDIA/FILE TYPE HANDLING ---
             String type = message.getType() != null ? message.getType().toLowerCase() : "";
             final String content = message.getContent();
             final String fileName = message.getFileName() != null ? message.getFileName() : type + "_" + message.getTimestamp();
 
-            boolean isMediaHandled = false; // Flag to track if content is media
+            boolean isMediaHandled = false;
 
             // --- IMAGE ---
             if ("image".equals(type)) {
@@ -211,31 +319,26 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
                         .apply(requestOptions)
                         .into(messageImage);
 
-                // Clicking image opens full screen AND makes it downloadable
                 messageImage.setOnClickListener(v -> {
-                    // Option 1: View full screen (current)
                     Intent intent = new Intent(v.getContext(), FullScreenImageActivity.class);
                     intent.putExtra("imageUrl", content);
                     v.getContext().startActivity(intent);
-
-                    // Option 2: Initiate download (added for required functionality)
-                    // If you want immediate download on click:
-                    // DownloadManagerUtils.startDownload(v.getContext(), content, fileName);
                 });
 
-                // If you want a separate download button for images, you'd need another ImageView in the layout.
-
-                // --- FILE (Documents) ---
+                // --- AUDIO / FILE / VIDEO ---
             } else if ("file".equals(type) || "video".equals(type) || "audio".equals(type)) {
 
-                // Check if the content is not text, but a downloadable URL
                 if (content != null && content.startsWith("http")) {
-
                     isMediaHandled = true;
 
                     // Display as a file container for download (Files, Audio, and Video)
                     if (fileContainer != null && textFileName != null && iconFileDownload != null) {
-                        fileContainer.setVisibility(View.VISIBLE);
+
+                        // For Audio, we prioritize the dedicated audio player view,
+                        // so we only show the file container if it's not audio
+                        if (!"audio".equals(type)) {
+                            fileContainer.setVisibility(View.VISIBLE);
+                        }
 
                         // Set text based on actual type
                         String displayFileName;
@@ -244,18 +347,17 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
                         } else if ("video".equals(type)) {
                             displayFileName = "[Video] " + fileName;
                         } else if ("audio".equals(type)) {
-                            displayFileName = "[Audio] " + fileName;
+                            displayFileName = "[Audio Message]"; // Often simplified for voice notes
                         } else {
                             displayFileName = fileName;
                         }
 
                         textFileName.setText(displayFileName);
 
-                        // UNIVERSAL DOWNLOAD CLICK HANDLER
-                        View downloadTarget = ("file".equals(type)) ? fileContainer : iconFileDownload;
+                        // UNIVERSAL DOWNLOAD CLICK HANDLER (for file/video)
+                        View downloadTarget = ("file".equals(type) || "video".equals(type)) ? fileContainer : iconFileDownload;
                         downloadTarget.setOnClickListener(v -> {
                             if (content != null && fileName != null) {
-                                // NOTE: Assumed DownloadManagerUtils.startDownload exists
                                 // DownloadManagerUtils.startDownload(v.getContext(), content, fileName);
                                 Toast.makeText(v.getContext(), "Download started for: " + displayFileName, Toast.LENGTH_SHORT).show();
                             } else {
@@ -264,18 +366,31 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
                         });
                     }
 
-                    // Specific Audio Playback Control (separate from download icon logic)
+                    // Specific Audio Playback Control
                     if ("audio".equals(type) && audioContainer != null && iconAudioPlay != null) {
                         audioContainer.setVisibility(View.VISIBLE);
 
-                        // Handle audio playback icons (as before)
+                        long durationMillis = message.getMediaDuration();
+
+                        // Set duration display and max progress
+                        if (durationMillis > 0) {
+                            audioSeekBar.setMax((int) durationMillis);
+                            textAudioDuration.setText(adapter.formatDuration(durationMillis));
+                        } else {
+                            textAudioDuration.setText("--:--");
+                        }
+                        audioSeekBar.setProgress(0);
+
+                        // Handle audio playback icons
                         if (adapter.currentlyPlayingUrl != null && adapter.currentlyPlayingUrl.equals(content)) {
                             iconAudioPlay.setImageResource(R.drawable.ic_pause);
                             adapter.currentAudioHolder = this;
+                            adapter.playbackHandler.post(adapter.updatePlaybackProgress);
                         } else {
                             iconAudioPlay.setImageResource(R.drawable.ic_play_arrow);
                         }
 
+                        // Play/Pause Click Handler
                         iconAudioPlay.setOnClickListener(v -> {
                             if (adapter.currentlyPlayingUrl != null && adapter.currentlyPlayingUrl.equals(content)) {
                                 adapter.stopPlayback();
@@ -283,9 +398,14 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
                                 adapter.startPlayback(this, content);
                             }
                         });
+
+                        // Long press to download audio
+                        audioContainer.setOnLongClickListener(v -> {
+                            Toast.makeText(v.getContext(), "Download started for Audio.", Toast.LENGTH_SHORT).show();
+                            return true;
+                        });
                     }
                 }
-
             }
 
             // --- FINAL TEXT FALLBACK ---
@@ -299,7 +419,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
             SimpleDateFormat formatter = new SimpleDateFormat("h:mm a", Locale.getDefault());
             textTimestamp.setText(formatter.format(new Date(message.getTimestamp())));
 
-            // Bind Seen Status (ONLY for sent messages)
+            // Bind Seen Status
             if (viewType == VIEW_TYPE_SENT) {
                 if (iconSeenStatus == null) return;
                 iconSeenStatus.setVisibility(View.VISIBLE);

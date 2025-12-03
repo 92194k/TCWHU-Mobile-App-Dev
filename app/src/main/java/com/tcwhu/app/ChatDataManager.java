@@ -15,19 +15,15 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.WriteBatch;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.firestore.ServerTimestamp;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 import java.util.Objects;
-
+import java.util.Locale;
 
 // NOTE: Placeholder classes (Message, Chat, ChatWindowCallbacks) are assumed to exist.
-// The Message class must include setMessageId(String) and getMessageId() methods.
 
 public class ChatDataManager {
 
@@ -67,23 +63,16 @@ public class ChatDataManager {
 
     // --- Message Listener and Filtering (Soft Delete Logic) ---
 
-    /**
-     * Fetches the soft-delete timestamp from Firestore FIRST, then calls setupMessageListener()
-     * only after the value is successfully loaded or confirmed absent.
-     */
     public void listenForMessages() {
         DocumentReference chatRef = db.collection("chats").document(chatId);
 
-        // 1. Check if this user (currentUserId) has a soft-delete timestamp.
         chatRef.get().addOnSuccessListener(doc -> {
-            userDeletionTimestamp = 0; // Reset local marker before checking Firestore
+            userDeletionTimestamp = 0;
 
             if (doc.exists()) {
-                // Safely retrieve the nested map and the specific user's timestamp
                 Map<String, Object> deletedAtMap = (Map<String, Object>) doc.get("deletedAt");
 
                 if (deletedAtMap != null && deletedAtMap.containsKey(currentUserId)) {
-                    // Firestore stores numbers as Long by default.
                     Long timestamp = (Long) deletedAtMap.get(currentUserId);
                     if (timestamp != null) {
                         userDeletionTimestamp = timestamp;
@@ -91,7 +80,6 @@ public class ChatDataManager {
                 }
             }
 
-            // 2. Clear the list and setup the listener with the correct filter.
             messageList.clear();
             setupMessageListener();
         }).addOnFailureListener(e -> {
@@ -101,11 +89,7 @@ public class ChatDataManager {
         });
     }
 
-    /**
-     * Sets up the Firestore listener, applying the soft-delete timestamp as a filter if present.
-     */
     private void setupMessageListener() {
-        // Remove existing listener before setting a new one
         if (chatListener != null) {
             chatListener.remove();
         }
@@ -115,9 +99,7 @@ public class ChatDataManager {
 
         Query query = messagesRef.orderBy("timestamp", Query.Direction.ASCENDING);
 
-        // 3. APPLY SOFT-DELETE FILTER: If userDeletionTimestamp > 0, only new messages are fetched.
         if (userDeletionTimestamp > 0) {
-            // Filter applied based on the timestamp fetched in listenForMessages()
             query = query.whereGreaterThan("timestamp", userDeletionTimestamp);
         }
 
@@ -132,7 +114,6 @@ public class ChatDataManager {
 
                     for (DocumentChange dc : snapshots.getDocumentChanges()) {
                         Message m = dc.getDocument().toObject(Message.class);
-                        // Enhance: Set the Firestore document ID for reliable updates (single message delete fix)
                         m.setMessageId(dc.getDocument().getId());
 
 
@@ -144,7 +125,6 @@ public class ChatDataManager {
                             }
 
                         } else if (dc.getType() == DocumentChange.Type.MODIFIED) {
-                            // Use MessageId for reliable update (needed for single message delete status change)
                             for (int i = 0; i < messageList.size(); i++) {
                                 if (Objects.equals(messageList.get(i).getMessageId(), m.getMessageId())) {
                                     messageList.set(i, m);
@@ -152,7 +132,6 @@ public class ChatDataManager {
                                 }
                             }
                         } else if (dc.getType() == DocumentChange.Type.REMOVED) {
-                            // Use MessageId for reliable removal
                             for (int i = 0; i < messageList.size(); i++) {
                                 if (Objects.equals(messageList.get(i).getMessageId(), m.getMessageId())) {
                                     messageList.remove(i);
@@ -173,11 +152,7 @@ public class ChatDataManager {
         db.collection("chats").document(chatId).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
-                        // Assuming Chat class exists with getLastSenderId() and getUsers()
-                        // Chat chat = doc.toObject(Chat.class);
-                        // if (chat != null && chat.getLastSenderId() != null && !chat.getLastSenderId().equals(currentUserId)) {
-                        //     doc.getReference().update("read", true);
-                        // }
+                        // Logic to mark chat as read
                     }
                 });
     }
@@ -186,18 +161,15 @@ public class ChatDataManager {
         if (chatListener != null) chatListener.remove();
     }
 
-    // --- Message Sending (Stable Soft-Delete Reset) ---
+    // --- Message Sending ---
 
-    public void sendMessage(String text, String type) {
-        sendMessage("text", text, null);
-    }
-
-    public void sendMessage(String type, String content, String fileName) {
+    public void sendMessage(String type, String content, String fileName, long durationMillis) {
         if (type.equals("text") && content.trim().isEmpty()) return;
 
-        String normalizedType = type.toLowerCase();
+        String normalizedType = type.toLowerCase(Locale.getDefault());
         String lastMessage;
 
+        // --- Generate lastMessage summary for chat overview ---
         switch (normalizedType) {
             case "text":
                 lastMessage = content;
@@ -209,7 +181,9 @@ public class ChatDataManager {
                 lastMessage = "[File: " + (fileName != null ? fileName : "Document") + "]";
                 break;
             case "audio":
-                lastMessage = "[Audio]";
+                // Use the duration to create a descriptive last message summary
+                String durationDisplay = formatDurationForSummary(durationMillis);
+                lastMessage = "[Voice Message (" + durationDisplay + ")]";
                 break;
             case "video":
                 lastMessage = "[Video]";
@@ -219,52 +193,51 @@ public class ChatDataManager {
                 break;
         }
 
-        // Save the message, then update the overview in the success callback.
-        saveMessageToFirestore(type, content, fileName, () -> {
+        saveMessageToFirestore(type, content, fileName, durationMillis, () -> {
             updateChatOverview(lastMessage, false);
-
             callbacks.showToast("Message sent.", Toast.LENGTH_SHORT);
-
-            // FIX: Remove the deletion filter without restarting the query.
             resetDeletionMarker();
         });
     }
 
-    /**
-     * FIX INCORPORATED: This method removes the soft-delete marker from Firestore and locally
-     * without clearing the message list or restarting the listener, thus preventing the
-     * reappearance of old messages. The existing live listener continues to receive new data.
-     */
+    private String formatDurationForSummary(long durationMillis) {
+        if (durationMillis <= 0) return "0:00"; // FIX: Default to 0:00 instead of "--:--"
+        int totalSeconds = (int) (durationMillis / 1000);
+        int seconds = totalSeconds % 60;
+        int minutes = totalSeconds / 60;
+
+        return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds);
+    }
+
     private void resetDeletionMarker() {
         if (userDeletionTimestamp == 0) {
-            // Already reset, no action needed
             return;
         }
 
         DocumentReference chatRef = db.collection("chats").document(chatId);
 
-        // Use FieldValue.delete() to remove the specific user's entry from the deletedAt map
         Map<String, Object> updates = new HashMap<>();
         updates.put("deletedAt." + currentUserId, FieldValue.delete());
 
         chatRef.update(updates)
                 .addOnSuccessListener(v -> {
-                    // 1. Reset the local filter marker to 0. This ensures that
-                    // if the user navigates away and comes back, no filter is applied.
                     userDeletionTimestamp = 0;
-
-                    // 2. IMPORTANT: We rely on the existing listener to now automatically
-                    // switch to an unfiltered view since the document field is gone.
-
-                    Log.d("ChatDataManager", "Soft-delete marker cleared from Firestore. New convo segment is live.");
+                    Log.d("ChatDataManager", "Soft-delete marker cleared.");
                 })
                 .addOnFailureListener(e -> {
                     Log.e("ChatDataManager", "Failed to reset soft-delete marker.", e);
                 });
     }
 
-    public void saveMessageToFirestore(String type, String content, String fileName, Runnable success) {
+    public void saveMessageToFirestore(String type, String content, String fileName, long durationMillis, Runnable success) {
         Map<String, Object> msg = new HashMap<>();
+
+        // --- CRITICAL NULL SAFETY CHECK ---
+        if (currentUserId == null) {
+            callbacks.showToast("Sender ID is null. Cannot send.", Toast.LENGTH_SHORT);
+            return;
+        }
+
         msg.put("senderId", currentUserId);
         msg.put("content", content);
         msg.put("type", type);
@@ -272,9 +245,14 @@ public class ChatDataManager {
         msg.put("seen", false);
         msg.put("status", 0);
 
-        String normalizedType = type.toLowerCase();
+        String normalizedType = type.toLowerCase(Locale.getDefault());
+
         if (("file".equals(normalizedType) || "audio".equals(normalizedType) || "video".equals(normalizedType)) && fileName != null) {
             msg.put("fileName", fileName);
+        }
+
+        if (durationMillis > 0) {
+            msg.put("mediaDuration", durationMillis);
         }
 
         db.collection("chats").document(chatId)
@@ -288,6 +266,12 @@ public class ChatDataManager {
     }
 
     public void updateChatOverview(String lastMessage, boolean isAcknowledgment) {
+
+        // --- CRITICAL NULL SAFETY CHECK ---
+        if (currentUserId == null || otherUserId == null) {
+            Log.e("ChatDataManager", "Cannot update overview: User IDs are null.");
+            return;
+        }
 
         Map<String, Object> chatData = new HashMap<>();
         chatData.put("lastMessage", lastMessage);
@@ -325,7 +309,8 @@ public class ChatDataManager {
     }
 
     public void sendConfirmationMessage(String acknowledgedMessage) {
-        saveMessageToFirestore("text", acknowledgedMessage, null, () -> {
+        // FIX: Reverting to the reliable saveMessageToFirestore callback chain.
+        saveMessageToFirestore("text", acknowledgedMessage, null, 0, () -> {
             updateChatOverview(acknowledgedMessage, true);
             callbacks.showToast("Warning acknowledged.", Toast.LENGTH_SHORT);
         });
@@ -339,18 +324,15 @@ public class ChatDataManager {
 
         chatRef.get().addOnSuccessListener(doc -> {
             if (doc.exists()) {
-                // Placeholder logic for checking other user's deletion status
-                String otherUser = otherUserId; // Simplified assumption
+                String otherUser = otherUserId;
                 Map<String, Object> deletedAtMap = (Map<String, Object>) doc.get("deletedAt");
 
                 boolean otherUserAlreadyDeleted = deletedAtMap != null && otherUser != null
                         && deletedAtMap.containsKey(otherUser);
 
                 if (otherUserAlreadyDeleted) {
-                    // Both users deleted -> Hard Delete
                     performHardDelete(chatRef.collection("messages"));
                 } else {
-                    // Only this user deleted -> Soft Delete
                     performSoftDelete(chatRef);
                 }
 
@@ -363,9 +345,6 @@ public class ChatDataManager {
         });
     }
 
-    /**
-     * Records the time of deletion for this specific user.
-     */
     private void performSoftDelete(DocumentReference chatRef) {
         long deletionTime = System.currentTimeMillis();
 
@@ -375,12 +354,9 @@ public class ChatDataManager {
         chatRef.update(update)
                 .addOnSuccessListener(v -> {
                     callbacks.showToast("Conversation history cleared.", Toast.LENGTH_SHORT);
-
-                    // Update local marker to reflect the deletion immediately
                     userDeletionTimestamp = deletionTime;
-
-                    messageList.clear(); // Clear local list to hide history immediately
-                    callbacks.finishActivity(); // Navigates away
+                    messageList.clear();
+                    callbacks.finishActivity();
                 })
                 .addOnFailureListener(e ->
                         callbacks.showToast("Failed to clear history.", Toast.LENGTH_SHORT));

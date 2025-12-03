@@ -1,6 +1,7 @@
 package com.tcwhu.app;
 
-// NOTE: Add imports as necessary for other existing Message fields if required, but none are visible here.
+// NOTE: Add imports as necessary for other existing Message fields if required,
+// but none are visible here.
 
 public class Message {
 
@@ -12,14 +13,16 @@ public class Message {
     private boolean seen;
 
     // --- NEW FIELDS ADDED FOR FEATURES ---
-    private String messageId; // Unique ID from Firestore Document (Required for Deletion/Updates)
-    private String fileName;  // Display name for documents (e.g., "report.pdf")
-    private int status;       // 0: Active, 1: Deleted For Everyone, 2: Uploading (NEW)
+    private String messageId;
+    private String fileName;
+    private int status;
+    private long mediaDuration; // <--- ADDED: Duration in milliseconds for media (e.g., audio/video)
     // -------------------------------------
 
     public Message() {
-        this.seen = false;      // Default to not seen
-        this.status = 0;        // Default to Active (or 2 for initial placeholder if sent immediately)
+        this.seen = false;
+        this.status = 0;
+        this.mediaDuration = 0;
     }
 
     // --- Existing Getters ---
@@ -33,6 +36,7 @@ public class Message {
     public String getMessageId() { return messageId; }
     public String getFileName() { return fileName; }
     public int getStatus() { return status; }
+    public long getMediaDuration() { return mediaDuration; }
 
 
     // --- Existing Setters ---
@@ -40,11 +44,12 @@ public class Message {
     public void setContent(String content) { this.content = content; }
     public void setType(String type) { this.type = type; }
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+
+    // 🔥 FIXED: Changed 'this.setSeen(seen)' to 'this.seen = seen' to prevent StackOverflowError
     public void setSeen(boolean seen) { this.seen = seen; }
 
 
-    // --- NEW/MODIFIED Setters (Crucial for Listener and Upload Status) ---
-    // The messageId must be set manually after fetching from Firestore snapshot.
+    // --- NEW/MODIFIED Setters ---
     public void setMessageId(String messageId) {
         this.messageId = messageId;
     }
@@ -55,5 +60,9 @@ public class Message {
 
     public void setStatus(int status) {
         this.status = status;
+    }
+
+    public void setMediaDuration(long mediaDuration) {
+        this.mediaDuration = mediaDuration;
     }
 }

@@ -37,5 +37,6 @@
     <color name="gray_light">#EEEEEE</color>
 
     <color name="suspended_orange">#F57C00</color>
+    <color name="red">#FF0000</color>
 
 </resources>

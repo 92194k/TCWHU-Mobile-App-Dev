@@ -42,6 +42,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         }
     }
 
+    // NOTE: cleanDeletedUsers is currently unused but kept for completeness.
     private void cleanDeletedUsers() {
         if (chatList == null || studentMap == null || currentUserId == null) return;
 
@@ -62,6 +63,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
                 }
             }
 
+            // Check if user is missing or potentially blocked/deleted
             if (otherUserId == null || !studentMap.containsKey(otherUserId)) {
                 iterator.remove();
             }
@@ -71,6 +73,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        // NOTE: Assumes R.layout.item_chat_list exists
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_chat_list, parent, false);
         return new ViewHolder(view);
@@ -81,15 +84,9 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         Chat chat = chatList.get(position);
 
         if (chat.getUsers() == null || chat.getUsers().isEmpty() || currentUserId == null) {
-            holder.itemView.setVisibility(View.GONE);
-            holder.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
+            holder.hideItem();
             return;
         }
-
-        holder.itemView.setVisibility(View.VISIBLE);
-        holder.itemView.setLayoutParams(new RecyclerView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
 
         String otherUserId = null;
         for (String id : chat.getUsers()) {
@@ -100,7 +97,14 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         }
 
         Student otherUser = studentMap.get(otherUserId);
-        holder.bind(otherUser, chat, listener, otherUserId, currentUserId);
+
+        // CRITICAL: Ensure otherUser exists before binding
+        if (otherUser != null) {
+            holder.showItem();
+            holder.bind(otherUser, chat, listener, otherUserId, currentUserId);
+        } else {
+            holder.hideItem();
+        }
     }
 
     @Override
@@ -111,53 +115,69 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView textAvatar, textNickname, textLastMessage, textTime;
         FrameLayout avatarContainer;
+        LinearLayout itemLayout; // Assuming the whole item is in a layout
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
+            // NOTE: Assumes R.id.textAvatar, R.id.textNickname, etc. exist
             textAvatar = itemView.findViewById(R.id.textAvatar);
             textNickname = itemView.findViewById(R.id.textNickname);
             textLastMessage = itemView.findViewById(R.id.textLastMessage);
             textTime = itemView.findViewById(R.id.textTime);
             avatarContainer = itemView.findViewById(R.id.avatarContainer);
+            // Assuming item_chat_list root is the view used for layout changes
+            itemLayout = (LinearLayout) itemView;
+        }
+
+        public void hideItem() {
+            itemView.setVisibility(View.GONE);
+            itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
+        }
+
+        public void showItem() {
+            itemView.setVisibility(View.VISIBLE);
+            itemView.setLayoutParams(new RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
         }
 
         public void bind(final Student otherUser, final Chat chat,
                          final OnChatSelectedListener listener, final String otherUserId, final String currentUserId) {
 
-            if (otherUser != null) {
-                textNickname.setText(otherUser.getNickname() != null ? otherUser.getNickname() : "Unknown User");
-                textAvatar.setText(otherUser.getAvatar() != null ? otherUser.getAvatar() : "?");
-                textLastMessage.setText(chat.getLastMessage() != null ? chat.getLastMessage() : "");
+            // CRITICAL CHECK: Already done in onBindViewHolder, but kept for method safety
+            if (otherUser == null) return;
 
-                if (chat.getTimestamp() > 0) {
-                    SimpleDateFormat formatter = new SimpleDateFormat("h:mm a", Locale.getDefault());
-                    textTime.setText(formatter.format(new Date(chat.getTimestamp())));
-                } else {
-                    textTime.setText("");
-                }
+            textNickname.setText(otherUser.getNickname() != null ? otherUser.getNickname() : "Unknown User");
+            textAvatar.setText(otherUser.getAvatar() != null ? otherUser.getAvatar() : "?");
+            textLastMessage.setText(chat.getLastMessage() != null ? chat.getLastMessage() : "");
 
-                // Bold Unread Messages
-                if (chat.getLastSenderId() != null && !chat.getLastSenderId().equals(currentUserId) && !chat.isRead()) {
-                    // UNREAD: Make text bold and change color
-                    textNickname.setTypeface(null, Typeface.BOLD);
-                    textLastMessage.setTypeface(null, Typeface.BOLD);
-                    textTime.setTypeface(null, Typeface.BOLD);
-                    textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_primary));
-                    textTime.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.deep_purple));
-                } else {
-                    // READ: Make text normal and gray
-                    textNickname.setTypeface(null, Typeface.NORMAL);
-                    textLastMessage.setTypeface(null, Typeface.NORMAL);
-                    textTime.setTypeface(null, Typeface.NORMAL);
-                    textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
-                    textTime.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
-                }
-
-                itemView.setOnClickListener(v -> listener.onChatSelected(otherUserId));
+            if (chat.getTimestamp() > 0) {
+                SimpleDateFormat formatter = new SimpleDateFormat("h:mm a", Locale.getDefault());
+                textTime.setText(formatter.format(new Date(chat.getTimestamp())));
             } else {
-                itemView.setVisibility(View.GONE);
-                itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
+                textTime.setText("");
             }
+
+            // Bold Unread Messages
+            if (chat.getLastSenderId() != null && !chat.getLastSenderId().equals(currentUserId) && !chat.isRead()) {
+                // UNREAD: Make text bold and change color
+                textNickname.setTypeface(null, Typeface.BOLD);
+                textLastMessage.setTypeface(null, Typeface.BOLD);
+                textTime.setTypeface(null, Typeface.BOLD);
+                // NOTE: Assumes R.color.text_primary/deep_purple exist
+                textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_primary));
+                textTime.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.deep_purple));
+            } else {
+                // READ: Make text normal and gray
+                textNickname.setTypeface(null, Typeface.NORMAL);
+                textLastMessage.setTypeface(null, Typeface.NORMAL);
+                textTime.setTypeface(null, Typeface.NORMAL);
+                // NOTE: Assumes R.color.text_secondary exists
+                textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
+                textTime.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
+            }
+
+            itemView.setOnClickListener(v -> listener.onChatSelected(otherUserId));
         }
     }
 }

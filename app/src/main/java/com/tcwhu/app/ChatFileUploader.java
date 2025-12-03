@@ -16,6 +16,7 @@ import com.cloudinary.android.MediaManager;
 import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -32,9 +33,12 @@ public class ChatFileUploader {
     private final ChatWindowCallbacks callbacks;
     private final FileUploadCompletionListener listener;
 
+    // --- REVISED INTERFACE ---
     public interface FileUploadCompletionListener {
-        void onFileUploadCompleted(String type, String content, String fileName);
+        // ADDED durationMillis parameter
+        void onFileUploadCompleted(String type, String content, String fileName, long durationMillis);
     }
+    // -------------------------
 
     public ChatFileUploader(Context context, String chatId, ChatWindowCallbacks callbacks, FileUploadCompletionListener listener) {
         this.context = context;
@@ -65,8 +69,18 @@ public class ChatFileUploader {
         launcher.launch(intent);
     }
 
-    // Handles the result from the file picker
+    // --- REVISED FOR FILE PICKER RESULT (No Duration, assumes 0) ---
     public void handleFilePickerResult(Uri selectedFileUri) {
+        handleFilePickerResult(selectedFileUri, 0);
+    }
+
+    // --- NEW/MODIFIED METHOD TO ACCEPT DURATION ---
+    /**
+     * Handles the result from the file picker, or a local file (like recorded audio).
+     * @param selectedFileUri The Uri of the file.
+     * @param durationMillis The duration in milliseconds (0 for non-media files).
+     */
+    public void handleFilePickerResult(Uri selectedFileUri, long durationMillis) {
         // 1. Validate Size
         long fileSize = getFileSize(selectedFileUri);
         if (fileSize > MAX_FILE_SIZE_BYTES) {
@@ -75,30 +89,52 @@ public class ChatFileUploader {
         }
 
         // 2. Get Metadata
+        String fileName = getFileName(selectedFileUri); // Get filename first
         String mimeType = context.getContentResolver().getType(selectedFileUri);
-        String fileName = getFileName(selectedFileUri);
 
-        if (mimeType == null) mimeType = "application/octet-stream";
+        // --- FIX 1: Robust MIME Type Assignment, especially for recorded audio (.aac) ---
+        if (mimeType == null || mimeType.isEmpty() || mimeType.equals("application/octet-stream")) {
+            // Check the filename extension for known local formats (like AAC from ChatRecorder)
+            if (fileName.toLowerCase().endsWith(".aac")) {
+                mimeType = "audio/aac";
+            } else {
+                mimeType = "application/octet-stream";
+            }
+        }
 
         // 3. Dispatch Unified Upload
-        uploadToCloudinary(selectedFileUri, mimeType, fileName);
+        // Pass durationMillis to the final upload method
+        uploadToCloudinary(selectedFileUri, mimeType, fileName, durationMillis);
     }
+    // ---------------------------------------------
 
+
+    /**
+     * Retrieves the file name, handling both content:// URIs and file:// URIs (like recorded audio).
+     */
     private String getFileName(Uri uri) {
         Cursor cursor = null;
         String name = "Unknown File";
-        try {
-            cursor = context.getContentResolver().query(uri, null, null, null, null);
-            if (cursor != null && cursor.moveToFirst()) {
-                int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                if (nameIndex != -1) {
-                    name = cursor.getString(nameIndex);
+
+        if (uri.getScheme() == null) return name;
+
+        if (uri.getScheme().equals("content")) {
+            try {
+                cursor = context.getContentResolver().query(uri, null, null, null, null);
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex != -1) {
+                        name = cursor.getString(nameIndex);
+                    }
                 }
+            } catch (Exception e) {
+                Log.e("ChatFileUploader", "Error getting content file name", e);
+            } finally {
+                if (cursor != null) cursor.close();
             }
-        } catch (Exception e) {
-            Log.e("ChatFileUploader", "Error getting file name", e);
-        } finally {
-            if (cursor != null) cursor.close();
+        } else if (uri.getScheme().equals("file")) {
+            // For local files (like recorder output), extract name directly from path
+            name = new File(uri.getPath()).getName();
         }
         return name;
     }
@@ -122,13 +158,14 @@ public class ChatFileUploader {
         return -1;
     }
 
-    // UNIFIED UPLOAD METHOD (handles image, video, audio, file)
-    private void uploadToCloudinary(Uri uri, String mimeType, String fileName) {
+    // --- REVISED UNIFIED UPLOAD METHOD ---
+    // ADDED durationMillis parameter
+    private void uploadToCloudinary(Uri uri, String mimeType, String fileName, long durationMillis) {
         callbacks.onProgressVisibilityChanged(View.VISIBLE);
 
         String resourceType;
         String firestoreType;
-        String typePrefix = mimeType.split("/")[0];
+        String typePrefix = mimeType.contains("/") ? mimeType.split("/")[0] : mimeType;
 
         if (typePrefix.equals("image")) {
             resourceType = "image";
@@ -137,11 +174,11 @@ public class ChatFileUploader {
             resourceType = "video";
             firestoreType = "video";
         } else if (typePrefix.equals("audio")) {
-            resourceType = "video"; // Cloudinary often prefers video for audio to handle complex formats
-            firestoreType = "audio";
+            resourceType = "video";
+            firestoreType = "audio"; // Correct type for Firestore
         } else {
-            resourceType = "raw"; // Use 'raw' for documents (PDF, DOCX, custom files)
-            firestoreType = "file"; // Save as 'file' type in Firestore
+            resourceType = "raw";
+            firestoreType = "file";
         }
 
         String folder = "chat_files/" + chatId;
@@ -155,8 +192,8 @@ public class ChatFileUploader {
                     public void onSuccess(String reqId, Map result) {
                         callbacks.onProgressVisibilityChanged(View.GONE);
                         String url = (String) result.get("secure_url");
-                        // Notify the Activity with the correct type and file name
-                        listener.onFileUploadCompleted(firestoreType, url, fileName);
+                        // Notify the Activity with the correct type, file name, AND DURATION
+                        listener.onFileUploadCompleted(firestoreType, url, fileName, durationMillis);
                     }
 
                     @Override

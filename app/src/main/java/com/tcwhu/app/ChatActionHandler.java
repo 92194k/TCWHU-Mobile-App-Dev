@@ -1,6 +1,7 @@
 package com.tcwhu.app;
 
 import android.content.Context;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -75,8 +76,7 @@ public class ChatActionHandler implements MessageOptionHandler {
     }
 
     private void reportUser(String reason) {
-        // NOTE: Assuming 'Report' class exists
-        // Placeholder for report logic
+        // NOTE: Placeholder for report logic
         // Report report = new Report(currentUserId, otherUserId, reason);
         // db.collection("reports").add(report)
         //         .addOnSuccessListener(r -> callbacks.showToast("Reported.", Toast.LENGTH_LONG))
@@ -97,6 +97,9 @@ public class ChatActionHandler implements MessageOptionHandler {
 
     @Override
     public void showMessageOptions(Message message) {
+        // Assuming message.getStatus() == 0 means active/not deleted
+        // And assuming Message class includes getSenderId()
+
         if (message.getSenderId().equals(currentUserId)) {
             new AlertDialog.Builder(context)
                     .setTitle("Message Options")
@@ -145,6 +148,17 @@ public class ChatActionHandler implements MessageOptionHandler {
     }
 
     private void deleteSingleMessage(Message message) {
+        // Assuming message.getMessageId() is set correctly:
+        if (message.getMessageId() != null) {
+            db.collection("chats").document(chatId)
+                    .collection("messages").document(message.getMessageId())
+                    .update("status", 1) // 1 = Deleted for Everyone
+                    .addOnSuccessListener(v -> callbacks.showToast("Message deleted.", Toast.LENGTH_SHORT))
+                    .addOnFailureListener(e -> callbacks.showToast("Failed to update message status.", Toast.LENGTH_SHORT));
+            return;
+        }
+
+        // Fallback to timestamp query (original slow logic):
         db.collection("chats").document(chatId)
                 .collection("messages")
                 .whereEqualTo("timestamp", message.getTimestamp())
@@ -154,7 +168,6 @@ public class ChatActionHandler implements MessageOptionHandler {
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!queryDocumentSnapshots.isEmpty()) {
                         DocumentReference docRef = queryDocumentSnapshots.getDocuments().get(0).getReference();
-                        // Updates status field (e.g., 0=sent, 1=deleted)
                         docRef.update("status", 1)
                                 .addOnSuccessListener(v -> callbacks.showToast("Message deleted.", Toast.LENGTH_SHORT))
                                 .addOnFailureListener(e -> callbacks.showToast("Failed to update message status.", Toast.LENGTH_SHORT));
@@ -194,14 +207,16 @@ public class ChatActionHandler implements MessageOptionHandler {
                     if (!appeal.isEmpty()) {
                         String msg = "[APPEAL]: " + appeal;
 
-                        dataManager.saveMessageToFirestore("text", msg, null, () ->
+                        // FIX APPLIED HERE (Correctly passes 0L)
+                        dataManager.saveMessageToFirestore("text", msg, null, 0L, () ->
                                 dataManager.updateChatOverview(msg, true)
                         );
 
                         callbacks.showToast("Appeal sent.", Toast.LENGTH_SHORT);
+                        adminWarningActions.setVisibility(View.GONE); // Hide buttons after successful send
                     } else {
                         callbacks.showToast("Explanation required.", Toast.LENGTH_SHORT);
-                        adminWarningActions.setVisibility(View.VISIBLE);
+                        // Don't hide buttons if validation fails
                     }
                 })
                 .setNegativeButton("Cancel", (d, w) -> adminWarningActions.setVisibility(View.VISIBLE))
