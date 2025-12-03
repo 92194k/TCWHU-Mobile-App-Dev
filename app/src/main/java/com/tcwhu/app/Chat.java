@@ -3,6 +3,7 @@ package com.tcwhu.app;
 import com.google.firebase.firestore.Exclude;
 import com.google.firebase.firestore.PropertyName;
 import java.util.List;
+import java.util.Map; // REQUIRED IMPORT
 
 public class Chat {
 
@@ -16,8 +17,8 @@ public class Chat {
     private boolean read;
     private boolean warningAcknowledged;
 
-    // --- NEW FIELD FOR SOFT DELETE ---
-    private List<String> deletedBy; // List of user IDs who have soft-deleted the conversation
+    // --- MODIFIED FIELD FOR SOFT DELETE (Map: userId -> deletion_timestamp) ---
+    private Map<String, Long> deletedAt;
 
     public Chat() {}
 
@@ -37,8 +38,8 @@ public class Chat {
     @PropertyName("warningAcknowledged")
     public boolean isWarningAcknowledged() { return warningAcknowledged; }
 
-    // --- NEW GETTER ---
-    public List<String> getDeletedBy() { return deletedBy; }
+    // --- MODIFIED GETTER ---
+    public Map<String, Long> getDeletedAt() { return deletedAt; }
 
 
     // SETTERS
@@ -74,8 +75,8 @@ public class Chat {
         this.warningAcknowledged = warningAcknowledged;
     }
 
-    // --- NEW SETTER ---
-    public void setDeletedBy(List<String> deletedBy) {
-        this.deletedBy = deletedBy;
+    // --- MODIFIED SETTER ---
+    public void setDeletedAt(Map<String, Long> deletedAt) {
+        this.deletedAt = deletedAt;
     }
 }

@@ -117,14 +117,13 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                     adminUser.setNickname("System Admin");
                     adminUser.setAvatar("🛡️");
                     adminUser.setRole("admin");
+                    // Assuming ReportsManagementActivity.ADMIN_USER_ID is a defined constant
                     studentMap.put(ReportsManagementActivity.ADMIN_USER_ID, adminUser);
 
                     listenForChats();
                 })
                 .addOnFailureListener(e -> Toast.makeText(getContext(), "Error loading user data.", Toast.LENGTH_SHORT).show());
     }
-
-// In ChatFragment.java
 
     private void listenForChats() {
         if (currentUserId == null) return;
@@ -135,7 +134,6 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
 
         chatListListener = chatsRef
                 // 1. Query: Fetch ALL chats where the current user is in the 'users' list.
-                // This is the only array query we need for the listener.
                 .whereArrayContains("users", currentUserId)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshots, e) -> {
@@ -159,10 +157,10 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                             }
                         }
 
-                        // 2. Client-Side Filter: Check for soft deletion status
-                        // If 'deletedBy' list is null or doesn't contain the currentUserId, the chat is visible.
-                        boolean isSoftDeletedByMe = chat.getDeletedBy() != null
-                                && chat.getDeletedBy().contains(currentUserId);
+                        // 2. Client-Side Filter: Check for soft deletion status using the Map
+                        // If the 'deletedAt' map contains the currentUserId as a key, the chat is hidden.
+                        boolean isSoftDeletedByMe = chat.getDeletedAt() != null
+                                && chat.getDeletedAt().containsKey(currentUserId);
 
                         // 3. Final Check and Add
                         if (otherUserId != null
