@@ -96,7 +96,9 @@
                 android:layout_marginTop="4dp"
                 android:text="For verification process only" />
 
+            <!-- CRITICAL FIX: Add TextInputLayout for Password Policy Display -->
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layoutPassword"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -112,12 +114,17 @@
                     android:minHeight="48dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Text view to display policy requirements/errors dynamically -->
             <TextView
+                android:id="@+id/textPasswordPolicyFeedback"
                 style="@style/TextAppearance.MaterialComponents.Caption"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/signup_password_guide" />
+                android:layout_marginStart="4dp"
+                android:textColor="@color/text_secondary"
+                android:text="Policy: 8+ chars, UC, LC, Number, Special Char." />
+
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"

@@ -216,31 +216,78 @@ public class StudentProfileFragment extends Fragment {
                 });
     }
 
+    /**
+     * Enforces the new password policy and provides specific error messages.
+     * Policy: 8+ chars, UC, LC, Number, Special Char.
+     * @param password The new password string to validate.
+     * @return A specific error message, or null if validation passes.
+     */
+    private String validatePassword(String password) {
+        if (password.length() < 8) {
+            return "Password must be at least 8 characters long.";
+        }
+        // Check for at least one uppercase letter
+        if (!password.matches(".*[A-Z].*")) {
+            return "Password must contain at least one uppercase letter.";
+        }
+        // Check for at least one lowercase letter
+        if (!password.matches(".*[a-z].*")) {
+            return "Password must contain at least one lowercase letter.";
+        }
+        // Check for at least one number
+        if (!password.matches(".*[0-9].*")) {
+            return "Password must contain at least one number.";
+        }
+        // Check for at least one special character (not letter or digit)
+        if (!password.matches(".*[^a-zA-Z0-9].*")) {
+            return "Password must contain at least one special character.";
+        }
+        return null; // Password is valid
+    }
+
     private void showChangePasswordDialog() {
         if (getContext() == null || currentUser == null) return;
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_change_password, null);
-        EditText inputCurrentPassword = dialogView.findViewById(R.id.inputCurrentPassword);
-        EditText inputNewPassword = dialogView.findViewById(R.id.inputNewPassword);
-        EditText inputConfirmPassword = dialogView.findViewById(R.id.inputConfirmPassword);
-        new AlertDialog.Builder(getContext())
+
+        // Use TextInputEditText to match the XML layout
+        final TextInputEditText inputCurrentPassword = dialogView.findViewById(R.id.inputCurrentPassword);
+        final TextInputEditText inputNewPassword = dialogView.findViewById(R.id.inputNewPassword);
+        final TextInputEditText inputConfirmPassword = dialogView.findViewById(R.id.inputConfirmPassword);
+
+        final AlertDialog dialog = new AlertDialog.Builder(getContext())
                 .setTitle("Change Password")
                 .setView(dialogView)
-                .setPositiveButton("Update", (dialog, which) -> {
-                    String current = inputCurrentPassword.getText().toString();
-                    String newPass = inputNewPassword.getText().toString();
-                    String confirmPass = inputConfirmPassword.getText().toString();
-                    if (!newPass.equals(confirmPass)) {
-                        Toast.makeText(getContext(), "New passwords do not match.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    if (newPass.length() < 6) {
-                        Toast.makeText(getContext(), "Password must be at least 6 characters.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    reauthenticateAndChangePassword(current, newPass);
-                })
+                .setPositiveButton("Update", null) // Set to null to override behavior below
                 .setNegativeButton("Cancel", null)
-                .show();
+                .create();
+
+        dialog.setOnShowListener(dialogInterface -> {
+            Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            positiveButton.setOnClickListener(v -> {
+                String current = inputCurrentPassword.getText().toString();
+                String newPass = inputNewPassword.getText().toString();
+                String confirmPass = inputConfirmPassword.getText().toString();
+
+                // 1. Password Match Check
+                if (!newPass.equals(confirmPass)) {
+                    Toast.makeText(getContext(), "New passwords do not match.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // 2. Password Policy Check (Provides specific error feedback)
+                String validationError = validatePassword(newPass);
+                if (validationError != null) {
+                    Toast.makeText(getContext(), validationError, Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                // If all checks pass, dismiss the dialog and proceed with reauthentication
+                dialog.dismiss();
+                reauthenticateAndChangePassword(current, newPass);
+            });
+        });
+
+        dialog.show();
     }
 
     private void reauthenticateAndChangePassword(String currentPassword, String newPassword) {
