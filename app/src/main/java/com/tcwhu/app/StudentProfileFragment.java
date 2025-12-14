@@ -1,14 +1,15 @@
 package com.tcwhu.app;
 
+import android.Manifest;
 import android.content.Intent;
-import android.content.res.Configuration;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
@@ -17,8 +18,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.AuthCredential;
@@ -33,9 +34,6 @@ public class StudentProfileFragment extends Fragment {
 
     private TextView textAvatar, textNickname, textYearLevel, textInterests, textStudentNumber;
     private Button buttonLogout, buttonDeleteAccount, buttonChangeAvatar, buttonEditNickname, buttonEditInterests, buttonChangePassword;
-    private SwitchMaterial switchTheme;
-    private ImageView iconTheme;
-    private TextView textThemeLabel;
 
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
@@ -43,6 +41,7 @@ public class StudentProfileFragment extends Fragment {
     private Student currentStudentProfile;
 
     private ActivityResultLauncher<Intent> avatarSelectorLauncher;
+    private ActivityResultLauncher<String> requestPermissionLauncher;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -56,12 +55,14 @@ public class StudentProfileFragment extends Fragment {
                 result -> {
                     if (result.getResultCode() == AppCompatActivity.RESULT_OK && result.getData() != null) {
                         String newAvatar = result.getData().getStringExtra("selectedAvatar");
-                        if (newAvatar != null) {
-                            updateAvatarInDatabase(newAvatar);
-                        }
+                        if (newAvatar != null) updateAvatarInDatabase(newAvatar);
                     }
                 }
         );
+
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (!isGranted) Toast.makeText(getContext(), "Notifications disabled.", Toast.LENGTH_SHORT).show();
+        });
     }
 
     @Nullable
@@ -69,27 +70,23 @@ public class StudentProfileFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_student_profile, container, false);
 
-        // Find all your views
         textAvatar = view.findViewById(R.id.textAvatar);
         textNickname = view.findViewById(R.id.textNickname);
         textYearLevel = view.findViewById(R.id.textYearLevel);
         textInterests = view.findViewById(R.id.textInterests);
         textStudentNumber = view.findViewById(R.id.textStudentNumber);
+
         buttonLogout = view.findViewById(R.id.buttonLogout);
         buttonDeleteAccount = view.findViewById(R.id.buttonDeleteAccount);
         buttonChangeAvatar = view.findViewById(R.id.buttonChangeAvatar);
         buttonEditNickname = view.findViewById(R.id.buttonEditNickname);
         buttonEditInterests = view.findViewById(R.id.buttonEditInterests);
         buttonChangePassword = view.findViewById(R.id.buttonChangePassword);
-        switchTheme = view.findViewById(R.id.switchTheme);
-        iconTheme = view.findViewById(R.id.iconTheme);
-        textThemeLabel = view.findViewById(R.id.textThemeLabel);
 
         loadUserProfile();
-        setupThemeSwitch();
+        checkNotificationPermission();
 
         buttonLogout.setOnClickListener(v -> logoutUser());
-
         buttonChangeAvatar.setOnClickListener(v -> launchAvatarSelector());
         buttonEditNickname.setOnClickListener(v -> {
             if (currentStudentProfile != null) showEditFieldDialog("nickname", currentStudentProfile.getNickname());
@@ -102,31 +99,11 @@ public class StudentProfileFragment extends Fragment {
         return view;
     }
 
-    private void setupThemeSwitch() {
-        if (getContext() == null) return;
-        int currentNightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-        boolean isCurrentlyDark = currentNightMode == Configuration.UI_MODE_NIGHT_YES;
-        updateThemeUI(isCurrentlyDark);
-        switchTheme.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
-                ThemeSwitcher.setTheme(getContext(), ThemeSwitcher.THEME_DARK);
-                updateThemeUI(true);
-            } else {
-                ThemeSwitcher.setTheme(getContext(), ThemeSwitcher.THEME_LIGHT);
-                updateThemeUI(false);
+    private void checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
             }
-        });
-    }
-
-    private void updateThemeUI(boolean isDarkThemeEnabled) {
-        if (isDarkThemeEnabled) {
-            switchTheme.setChecked(true);
-            textThemeLabel.setText("Light Mode");
-            iconTheme.setImageResource(R.drawable.ic_sun);
-        } else {
-            switchTheme.setChecked(false);
-            textThemeLabel.setText("Dark Mode");
-            iconTheme.setImageResource(R.drawable.ic_dark_mode);
         }
     }
 
@@ -146,9 +123,6 @@ public class StudentProfileFragment extends Fragment {
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(getContext(), "Avatar updated successfully!", Toast.LENGTH_SHORT).show();
                     loadUserProfile();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Failed to update avatar.", Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -165,7 +139,6 @@ public class StudentProfileFragment extends Fragment {
                             textStudentNumber.setText(currentStudentProfile.getStudentNumber());
                             textInterests.setText(currentStudentProfile.getInterests());
 
-                            // Setup the deletion button based on profile status
                             if (currentStudentProfile.isDeletionRequested()) {
                                 buttonDeleteAccount.setEnabled(false);
                                 buttonDeleteAccount.setText("Deletion Requested");
@@ -176,9 +149,6 @@ public class StudentProfileFragment extends Fragment {
                             }
                         }
                     }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Failed to load profile.", Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -208,48 +178,24 @@ public class StudentProfileFragment extends Fragment {
         updates.put(field, value);
         db.collection("users").document(currentUser.getUid()).update(updates)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), field + " updated successfully.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Updated successfully.", Toast.LENGTH_SHORT).show();
                     loadUserProfile();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Update failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
-    /**
-     * Enforces the new password policy and provides specific error messages.
-     * Policy: 8+ chars, UC, LC, Number, Special Char.
-     * @param password The new password string to validate.
-     * @return A specific error message, or null if validation passes.
-     */
     private String validatePassword(String password) {
-        if (password.length() < 8) {
-            return "Password must be at least 8 characters long.";
-        }
-        // Check for at least one uppercase letter
-        if (!password.matches(".*[A-Z].*")) {
-            return "Password must contain at least one uppercase letter.";
-        }
-        // Check for at least one lowercase letter
-        if (!password.matches(".*[a-z].*")) {
-            return "Password must contain at least one lowercase letter.";
-        }
-        // Check for at least one number
-        if (!password.matches(".*[0-9].*")) {
-            return "Password must contain at least one number.";
-        }
-        // Check for at least one special character (not letter or digit)
-        if (!password.matches(".*[^a-zA-Z0-9].*")) {
-            return "Password must contain at least one special character.";
-        }
-        return null; // Password is valid
+        if (password.length() < 8) return "Password must be at least 8 characters long.";
+        if (!password.matches(".*[A-Z].*")) return "Password must contain at least one uppercase letter.";
+        if (!password.matches(".*[a-z].*")) return "Password must contain at least one lowercase letter.";
+        if (!password.matches(".*[0-9].*")) return "Password must contain at least one number.";
+        if (!password.matches(".*[^a-zA-Z0-9].*")) return "Password must contain at least one special character.";
+        return null;
     }
 
     private void showChangePasswordDialog() {
         if (getContext() == null || currentUser == null) return;
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_change_password, null);
 
-        // Use TextInputEditText to match the XML layout
         final TextInputEditText inputCurrentPassword = dialogView.findViewById(R.id.inputCurrentPassword);
         final TextInputEditText inputNewPassword = dialogView.findViewById(R.id.inputNewPassword);
         final TextInputEditText inputConfirmPassword = dialogView.findViewById(R.id.inputConfirmPassword);
@@ -257,7 +203,7 @@ public class StudentProfileFragment extends Fragment {
         final AlertDialog dialog = new AlertDialog.Builder(getContext())
                 .setTitle("Change Password")
                 .setView(dialogView)
-                .setPositiveButton("Update", null) // Set to null to override behavior below
+                .setPositiveButton("Update", null)
                 .setNegativeButton("Cancel", null)
                 .create();
 
@@ -268,58 +214,41 @@ public class StudentProfileFragment extends Fragment {
                 String newPass = inputNewPassword.getText().toString();
                 String confirmPass = inputConfirmPassword.getText().toString();
 
-                // 1. Password Match Check
                 if (!newPass.equals(confirmPass)) {
                     Toast.makeText(getContext(), "New passwords do not match.", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                // 2. Password Policy Check (Provides specific error feedback)
                 String validationError = validatePassword(newPass);
                 if (validationError != null) {
                     Toast.makeText(getContext(), validationError, Toast.LENGTH_LONG).show();
                     return;
                 }
 
-                // If all checks pass, dismiss the dialog and proceed with reauthentication
                 dialog.dismiss();
                 reauthenticateAndChangePassword(current, newPass);
             });
         });
-
         dialog.show();
     }
 
     private void reauthenticateAndChangePassword(String currentPassword, String newPassword) {
         String email = currentUser.getEmail();
-        if (email == null) {
-            Toast.makeText(getContext(), "Cannot change password. User email not found.", Toast.LENGTH_LONG).show();
-            return;
-        }
+        if (email == null) return;
+
         AuthCredential credential = EmailAuthProvider.getCredential(email, currentPassword);
         currentUser.reauthenticate(credential)
                 .addOnSuccessListener(aVoid -> {
                     currentUser.updatePassword(newPassword)
-                            .addOnSuccessListener(task -> {
-                                Toast.makeText(getContext(), "Password updated successfully!", Toast.LENGTH_LONG).show();
-                            })
-                            .addOnFailureListener(e -> {
-                                Toast.makeText(getContext(), "Failed to update password: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                            });
+                            .addOnSuccessListener(task -> Toast.makeText(getContext(), "Password updated.", Toast.LENGTH_LONG).show())
+                            .addOnFailureListener(e -> Toast.makeText(getContext(), "Update failed.", Toast.LENGTH_LONG).show());
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Authentication failed. Current password incorrect.", Toast.LENGTH_LONG).show();
-                });
+                .addOnFailureListener(e -> Toast.makeText(getContext(), "Current password incorrect.", Toast.LENGTH_LONG).show());
     }
 
-    // --- Step 1 of Deletion ---
     private void showStudentNumberConfirmationDialog() {
-        if (getContext() == null || currentStudentProfile == null) {
-            Toast.makeText(getContext(), "Profile data not loaded yet.", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (getContext() == null || currentStudentProfile == null) return;
 
-        // Inflate the custom layout (dialog_request_deletion.xml)
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_request_deletion, null);
         final TextInputEditText inputNumber = dialogView.findViewById(R.id.inputConfirmStudentNumber);
         final TextInputEditText inputReason = dialogView.findViewById(R.id.inputDeletionReason);
@@ -341,58 +270,39 @@ public class StudentProfileFragment extends Fragment {
                 layoutNumber.setError(null);
                 layoutReason.setError(null);
 
-                if (number.isEmpty()) {
-                    layoutNumber.setError("Please confirm your student number");
-                    return;
-                }
-                if (!number.equals(currentStudentProfile.getStudentNumber())) {
-                    layoutNumber.setError("Student number does not match our records");
-                    return;
-                }
-                if (reason.isEmpty()) {
-                    layoutReason.setError("A reason is required");
-                    return;
-                }
+                if (number.isEmpty()) { layoutNumber.setError("Please confirm your student number"); return; }
+                if (!number.equals(currentStudentProfile.getStudentNumber())) { layoutNumber.setError("Incorrect student number"); return; }
+                if (reason.isEmpty()) { layoutReason.setError("Reason required"); return; }
 
                 dialog.dismiss();
-                showFinalDeletionWarning(reason); // Pass the reason to the next step
+                showFinalDeletionWarning(reason);
             });
         });
-
         dialog.show();
     }
 
-    // --- Step 2 of Deletion (Updated Message) ---
     private void showFinalDeletionWarning(String reason) {
         if (getContext() == null) return;
         new AlertDialog.Builder(getContext())
                 .setTitle("⚠️ Are you absolutely sure?")
-                // --- THIS IS THE UPDATED MESSAGE ---
-                .setMessage("Your request will be sent to an admin for permanent deletion. You will be logged out.\n\nTo appeal or cancel this request, please email alaokhemberly@gmail.com.\n\nThis action CANNOT BE REVERTED by you.")
-                // --- END OF UPDATE ---
-                .setPositiveButton("Yes, Request Deletion", (dialog, which) -> {
-                    requestAccountDeletion(reason); // Pass the reason
-                })
+                .setMessage("Your request will be sent to an admin for permanent deletion. You will be logged out.")
+                .setPositiveButton("Yes, Request Deletion", (dialog, which) -> requestAccountDeletion(reason))
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    // --- Step 3 of Deletion (Updates Firestore with reason) ---
     private void requestAccountDeletion(String reason) {
         if (currentUser == null) return;
 
         Map<String, Object> updates = new HashMap<>();
         updates.put("isDeletionRequested", true);
-        updates.put("deletionReason", reason); // <-- Save the reason
+        updates.put("deletionReason", reason);
 
         db.collection("users").document(currentUser.getUid())
                 .update(updates)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), "Deletion request sent. You will be logged out.", Toast.LENGTH_LONG).show();
-                    logoutUser(); // Log user out
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Failed to send request: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Request sent. Logging out.", Toast.LENGTH_LONG).show();
+                    logoutUser();
                 });
     }
 

@@ -38,10 +38,8 @@ public class ActivityLogDetailActivity extends AppCompatActivity {
             textAction.setText(log.getAction());
             textAdminId.setText(log.getAdminId());
 
-            // Timestamp
             SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy, h:mm:ss a", Locale.US);
-            String dateString = formatter.format(new Date(log.getTimestamp()));
-            textTimestamp.setText(dateString);
+            textTimestamp.setText(formatter.format(new Date(log.getTimestamp())));
 
             if (log.getTargetId() != null && !log.getTargetId().isEmpty()) {
                 textTargetId.setText(log.getTargetId());
@@ -51,7 +49,6 @@ public class ActivityLogDetailActivity extends AppCompatActivity {
                 textTargetId.setVisibility(View.GONE);
                 textTargetIdLabel.setVisibility(View.GONE);
             }
-
         } else {
             Toast.makeText(this, "Error: Could not load log details.", Toast.LENGTH_SHORT).show();
             finish();

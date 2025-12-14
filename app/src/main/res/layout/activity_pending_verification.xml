@@ -102,7 +102,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Questions? Contact admin@tcu.edu"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center"
+        android:text="Have questions or need help?\nReach out to our admin at alaokhemberly@gmail.com"
         android:textColor="@color/text_secondary"
         android:textSize="12sp" />
 

@@ -12,7 +12,6 @@ import android.widget.Toast;
 import android.util.Log;
 import java.io.File;
 import android.net.Uri;
-import android.view.ViewGroup;
 
 public class VoiceMessageController implements View.OnTouchListener {
 
@@ -46,7 +45,6 @@ public class VoiceMessageController implements View.OnTouchListener {
                 updateTimerUI(elapsedTime);
 
                 if (elapsedTime >= MAX_DURATION_MILLIS) {
-                    Log.d(TAG, "Max duration reached. Stopping recording.");
                     stopRecording(true);
                 } else {
                     handler.postDelayed(this, UPDATE_INTERVAL_MILLIS);
@@ -55,9 +53,6 @@ public class VoiceMessageController implements View.OnTouchListener {
         }
     };
 
-    /**
-     * Initializes the voice message controller with all required UI references.
-     */
     public VoiceMessageController(Context context, ChatFileUploader fileUploader, ImageButton micButton,
                                   TextView timerTextView, LinearLayout voiceRecordingOverlay, LinearLayout inputContainer,
                                   TextView slideToCancelText) {
@@ -68,7 +63,6 @@ public class VoiceMessageController implements View.OnTouchListener {
         this.voiceRecordingOverlay = voiceRecordingOverlay;
         this.inputContainer = inputContainer;
         this.slideToCancelText = slideToCancelText;
-
         this.slideCancelThresholdPx = SLIDE_CANCEL_THRESHOLD_DP * context.getResources().getDisplayMetrics().density;
     }
 
@@ -76,39 +70,30 @@ public class VoiceMessageController implements View.OnTouchListener {
         int totalSeconds = (int) (durationMillis / 1000);
         int minutes = totalSeconds / 60;
         int seconds = totalSeconds % 60;
-
-        String timeString = String.format("%02d:%02d", minutes, seconds);
-        timerTextView.setText(timeString);
+        timerTextView.setText(String.format("%02d:%02d", minutes, seconds));
     }
 
     private void startRecording() {
         if (isRecording) return;
 
-        // 1. UI Switch: Hide regular input, show recording overlay
         inputContainer.setVisibility(View.GONE);
         voiceRecordingOverlay.setVisibility(View.VISIBLE);
 
-        // 2. Prepare file path (CRITICAL CHANGE: Use internal cache for reliability)
-        String outputFilePath = new File(context.getCacheDir(),
-                "audio_record_" + System.currentTimeMillis() + ".aac").getAbsolutePath();
+        String outputFilePath = new File(context.getCacheDir(), "audio_record_" + System.currentTimeMillis() + ".aac").getAbsolutePath();
 
-        // 3. Initialize and Start Recorder
         audioRecorder = new ChatRecorder(context, outputFilePath, MAX_DURATION_MILLIS);
         try {
             audioRecorder.start();
-
             isRecording = true;
             recordingStartTime = System.currentTimeMillis();
 
-            // 4. Visual Feedback
             micButton.setImageResource(R.drawable.ic_mic);
-
             timerTextView.setText("00:00");
             slideToCancelText.setText("← Slide up to cancel");
             handler.post(timerRunnable);
 
         } catch (Exception e) {
-            Toast.makeText(context, "Failed to start recording. Please check permissions.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Failed to start recording.", Toast.LENGTH_SHORT).show();
             Log.e(TAG, "Recording start error", e);
             cleanupUI();
             audioRecorder = null;
@@ -136,23 +121,18 @@ public class VoiceMessageController implements View.OnTouchListener {
 
                 if (filePath != null) {
                     if (recordingDuration < MIN_DURATION_MILLIS) {
-                        // Too short, delete file
                         new File(filePath).delete();
-                        Toast.makeText(context, "Recording too short. Cancelled.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Recording too short.", Toast.LENGTH_SHORT).show();
                     } else if (shouldSend) {
-                        // Corrected call to match the updated ChatFileUploader signature
                         Uri fileUri = Uri.fromFile(new File(filePath));
                         fileUploader.handleFilePickerResult(fileUri, recordingDuration);
-
                         Toast.makeText(context, "Voice Message Sent.", Toast.LENGTH_SHORT).show();
                     } else {
-                        // Cancelled by slide-up action, delete file
                         new File(filePath).delete();
                         Toast.makeText(context, "Recording Cancelled.", Toast.LENGTH_SHORT).show();
                     }
                 }
             } catch (Exception e) {
-                Toast.makeText(context, "Recording stopped abruptly.", Toast.LENGTH_SHORT).show();
                 Log.e(TAG, "Recording stop error", e);
             } finally {
                 audioRecorder = null;
@@ -160,12 +140,8 @@ public class VoiceMessageController implements View.OnTouchListener {
         }
     }
 
-    // --- Touch Listener Implementation ---
-
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-
-        // Check if mic button is used, and if permissions were granted (handled in Activity)
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 if (!isRecording) {
@@ -179,15 +155,12 @@ public class VoiceMessageController implements View.OnTouchListener {
                     float currentY = event.getRawY();
                     float dy = touchStartY - currentY;
 
-                    // Check for slide-to-cancel
                     if (dy > slideCancelThresholdPx) {
-                        stopRecording(false); // Stop and DO NOT send
+                        stopRecording(false);
                         return true;
                     } else if (dy > 50) {
-                        // Visual cue for readiness to cancel
                         slideToCancelText.setText("Release to Send");
                     } else {
-                        // Default cue
                         slideToCancelText.setText("← Slide up to cancel");
                     }
                 }
@@ -196,7 +169,6 @@ public class VoiceMessageController implements View.OnTouchListener {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 if (isRecording) {
-                    // Send the message upon release
                     stopRecording(true);
                 }
                 return true;
@@ -204,17 +176,12 @@ public class VoiceMessageController implements View.OnTouchListener {
         return false;
     }
 
-    /**
-     * Cleans up the handler and recorder when the activity is destroyed.
-     */
     public void cleanup() {
         handler.removeCallbacks(timerRunnable);
         if (audioRecorder != null) {
             try {
                 audioRecorder.stop();
-            } catch (Exception e) {
-                // Ignore cleanup stop failures
-            }
+            } catch (Exception ignored) {}
         }
     }
 }

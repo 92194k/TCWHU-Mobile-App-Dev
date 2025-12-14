@@ -2,15 +2,17 @@ package com.tcwhu.app;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
-import android.os.Handler; // <--- ADDED
-import android.os.Looper; // <--- ADDED
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.MimeTypeMap;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.SeekBar; // <--- ADDED
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -26,8 +28,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-// NOTE: Placeholder classes (Message, DownloadManagerUtils, FullScreenImageActivity, R.drawable.ic_pause/ic_play_arrow/R.color.deep_purple/R.color.inactive_gray) are assumed to exist.
-
 public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MessageViewHolder> {
 
     private static final int VIEW_TYPE_SENT = 1;
@@ -36,47 +36,43 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     private final List<Message> messageList;
     private final String currentUserId;
     private final MessageOptionHandler messageOptionHandler;
+    private final DownloadRequestListener downloadListener;
 
-    // --- Audio Playback Management ---
+    // Audio Playback
     private MediaPlayer mediaPlayer;
     private MessageViewHolder currentAudioHolder = null;
     private String currentlyPlayingUrl = null;
-    private final Handler playbackHandler = new Handler(Looper.getMainLooper()); // <--- ADDED HANDLER
+    private final Handler playbackHandler = new Handler(Looper.getMainLooper());
 
-    // Runnable for updating the progress bar and time text
     private final Runnable updatePlaybackProgress = new Runnable() {
         @Override
         public void run() {
             if (mediaPlayer != null && mediaPlayer.isPlaying() && currentAudioHolder != null) {
                 int currentPosition = mediaPlayer.getCurrentPosition();
                 int duration = mediaPlayer.getDuration();
-
-                // Set max duration for SeekBar (in milliseconds)
                 currentAudioHolder.audioSeekBar.setMax(duration);
                 currentAudioHolder.audioSeekBar.setProgress(currentPosition);
 
-                // Update time display: 0:0X / 0:YY
-                currentAudioHolder.textAudioDuration.setText(
-                        formatDuration(currentPosition) + " / " + formatDuration(duration)
-                );
-
-                playbackHandler.postDelayed(this, 100); // Update every 100ms
+                if (duration > 0) {
+                    currentAudioHolder.textAudioDuration.setText(
+                            formatDuration(currentPosition) + " / " + formatDuration(duration)
+                    );
+                }
+                playbackHandler.postDelayed(this, 100);
             }
         }
     };
-    // ---------------------------------
 
-    /**
-     * Primary Constructor. Takes MessageOptionHandler interface.
-     */
-    public MessagesAdapter(List<Message> messageList, String currentUserId, MessageOptionHandler messageOptionHandler) {
+    public MessagesAdapter(List<Message> messageList, String currentUserId,
+                           MessageOptionHandler messageOptionHandler, DownloadRequestListener downloadListener) {
         this.messageList = messageList;
         this.currentUserId = currentUserId;
         this.messageOptionHandler = messageOptionHandler;
+        this.downloadListener = downloadListener;
     }
 
     public void cleanup() {
-        playbackHandler.removeCallbacks(updatePlaybackProgress); // <--- CLEANUP HANDLER
+        playbackHandler.removeCallbacks(updatePlaybackProgress);
         if (mediaPlayer != null) {
             mediaPlayer.stop();
             mediaPlayer.release();
@@ -116,43 +112,28 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
         return messageList.size();
     }
 
-    // Private startPlayback helper is used internally by the ViewHolder
     private void startPlayback(MessageViewHolder holder, String url) {
         stopPlayback();
-
         mediaPlayer = new MediaPlayer();
         try {
             mediaPlayer.setDataSource(url);
             mediaPlayer.prepareAsync();
-
             holder.iconAudioPlay.setImageResource(R.drawable.ic_pause);
             currentAudioHolder = holder;
             currentlyPlayingUrl = url;
-
             mediaPlayer.setOnPreparedListener(mp -> {
                 mp.start();
-
-                // Use the duration from the MediaPlayer after preparation
                 int duration = mp.getDuration();
                 currentAudioHolder.audioSeekBar.setMax(duration);
                 currentAudioHolder.audioSeekBar.setProgress(0);
-
-                // Display the correct full duration immediately (0:00 / 0:XX)
-                currentAudioHolder.textAudioDuration.setText(
-                        formatDuration(0) + " / " + formatDuration(duration)
-                );
-
-                playbackHandler.post(updatePlaybackProgress); // Start progress updates
+                currentAudioHolder.textAudioDuration.setText(formatDuration(0) + " / " + formatDuration(duration));
+                playbackHandler.post(updatePlaybackProgress);
             });
-
             mediaPlayer.setOnCompletionListener(mp -> {
-                // Reset UI on completion
                 currentAudioHolder.audioSeekBar.setProgress(0);
-                // Display only the total duration (0:XX)
                 currentAudioHolder.textAudioDuration.setText(formatDuration(currentAudioHolder.message.getMediaDuration()));
                 stopPlayback();
             });
-
         } catch (IOException e) {
             Toast.makeText(holder.itemView.getContext(), "Error playing audio.", Toast.LENGTH_SHORT).show();
             stopPlayback();
@@ -160,8 +141,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     }
 
     public void stopPlayback() {
-        playbackHandler.removeCallbacks(updatePlaybackProgress); // Stop progress updates
-
+        playbackHandler.removeCallbacks(updatePlaybackProgress);
         if (mediaPlayer != null) {
             mediaPlayer.stop();
             mediaPlayer.release();
@@ -169,7 +149,6 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
         }
         if (currentAudioHolder != null) {
             currentAudioHolder.iconAudioPlay.setImageResource(R.drawable.ic_play_arrow);
-            // On stop, reset progress bar and display end time
             currentAudioHolder.audioSeekBar.setProgress(0);
             currentAudioHolder.textAudioDuration.setText(formatDuration(currentAudioHolder.message.getMediaDuration()));
             currentAudioHolder = null;
@@ -177,36 +156,33 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
         currentlyPlayingUrl = null;
     }
 
-    /**
-     * Formats duration in milliseconds to "m:ss" or "mm:ss"
-     */
     private String formatDuration(long durationMillis) {
         int totalSeconds = (int) (durationMillis / 1000);
         int seconds = totalSeconds % 60;
         int minutes = totalSeconds / 60;
-
-        if (minutes > 0) {
-            return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds);
-        } else {
-            return String.format(Locale.getDefault(), "0:%02d", seconds);
-        }
+        if (minutes > 0) return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds);
+        else return String.format(Locale.getDefault(), "0:%02d", seconds);
     }
 
-    // --- MessageViewHolder Class ---
-    static class MessageViewHolder extends RecyclerView.ViewHolder {
-        // --- TEXT/IMAGE UI ---
-        TextView messageText, textTimestamp, textFileName, textDeletedStatus;
-        ImageView messageImage, iconSeenStatus, iconFileDownload;
-        LinearLayout fileContainer;
+    private String getMimeTypeFromFileName(String fileName) {
+        if (fileName == null) return "*/*";
+        int lastDot = fileName.lastIndexOf('.');
+        if (lastDot != -1) {
+            String extension = fileName.substring(lastDot + 1).toLowerCase();
+            String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+            if (mime != null) return mime;
+        }
+        return "*/*";
+    }
 
-        // --- AUDIO UI ---
-        TextView textAudioDuration; // <--- DURATION TEXT VIEW
+    class MessageViewHolder extends RecyclerView.ViewHolder {
+        TextView messageText, textTimestamp, textFileName, textDeletedStatus, textAudioDuration;
+        ImageView messageImage, iconSeenStatus, iconFileDownload, iconFile;
+        LinearLayout fileContainer;
         ImageView iconAudioPlay;
         LinearLayout audioContainer;
-        SeekBar audioSeekBar; // <--- SEEKBAR
-
+        SeekBar audioSeekBar;
         Message message;
-
         private final MessagesAdapter adapter;
         private final MessageOptionHandler messageOptionHandler;
 
@@ -215,85 +191,63 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
             this.adapter = adapter;
             this.messageOptionHandler = messageOptionHandler;
 
-            // --- Find Common Views ---
             messageText = itemView.findViewById(R.id.messageText);
             messageImage = itemView.findViewById(R.id.messageImage);
             textTimestamp = itemView.findViewById(R.id.textTimestamp);
             iconSeenStatus = itemView.findViewById(R.id.iconSeenStatus);
+
             fileContainer = itemView.findViewById(R.id.fileContainer);
             textFileName = itemView.findViewById(R.id.textFileName);
             iconFileDownload = itemView.findViewById(R.id.iconFileDownload);
             textDeletedStatus = itemView.findViewById(R.id.textDeletedStatus);
 
-            // --- Find Audio Views ---
             audioContainer = itemView.findViewById(R.id.audioContainer);
             iconAudioPlay = itemView.findViewById(R.id.iconAudioPlay);
             audioSeekBar = itemView.findViewById(R.id.audioSeekBar);
             textAudioDuration = itemView.findViewById(R.id.textAudioDuration);
+            iconFile = itemView.findViewById(R.id.iconFile);
 
-            // --- SEEKBAR LISTENER ---
             if (audioSeekBar != null) {
                 audioSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        if (message == null) return; // Check added for safety during binding
-
+                        if (message == null) return;
                         long totalDuration = message.getMediaDuration();
-
                         if (fromUser && adapter.mediaPlayer != null && adapter.currentAudioHolder == MessageViewHolder.this) {
-                            // User is dragging and this is the currently playing message
                             adapter.mediaPlayer.seekTo(progress);
                             textAudioDuration.setText(adapter.formatDuration(progress) + " / " + adapter.formatDuration(totalDuration));
                         } else if (fromUser) {
-                            // User is dragging a seekbar on a non-playing message
                             textAudioDuration.setText(adapter.formatDuration(progress) + " / " + adapter.formatDuration(totalDuration));
                         }
                     }
-
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {
-                        if (adapter.mediaPlayer != null && adapter.currentAudioHolder == MessageViewHolder.this) {
+                    @Override public void onStartTrackingTouch(SeekBar seekBar) {
+                        if (adapter.mediaPlayer != null && adapter.currentAudioHolder == MessageViewHolder.this)
                             adapter.playbackHandler.removeCallbacks(adapter.updatePlaybackProgress);
-                        }
                     }
-
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {
-                        if (adapter.mediaPlayer != null && adapter.currentAudioHolder == MessageViewHolder.this) {
+                    @Override public void onStopTrackingTouch(SeekBar seekBar) {
+                        if (adapter.mediaPlayer != null && adapter.currentAudioHolder == MessageViewHolder.this)
                             adapter.playbackHandler.post(adapter.updatePlaybackProgress);
-                        }
                     }
                 });
             }
-            // ------------------------
         }
 
         public void bind(Message message, int viewType) {
-            this.message = message; // Store for duration access
+            this.message = message;
 
-            // Reset all containers to GONE
             messageText.setVisibility(View.GONE);
             messageImage.setVisibility(View.GONE);
             if (fileContainer != null) fileContainer.setVisibility(View.GONE);
             if (audioContainer != null) audioContainer.setVisibility(View.GONE);
             if (textDeletedStatus != null) textDeletedStatus.setVisibility(View.GONE);
+
             textTimestamp.setVisibility(View.VISIBLE);
             if (iconSeenStatus != null) iconSeenStatus.setVisibility(View.GONE);
 
-            // Set up long press listener for options
-            if (message.getStatus() == 0) {
-                itemView.setOnLongClickListener(v -> {
-                    messageOptionHandler.showMessageOptions(message);
-                    return true;
-                });
-            } else {
-                itemView.setOnLongClickListener(null);
-            }
-
-            // --- DELETION LOGIC (Status 1) ---
+            // Handle Deleted Messages
             if (message.getStatus() == 1) {
                 if (textDeletedStatus != null) {
-                    textDeletedStatus.setText("Message deleted");
+                    textDeletedStatus.setText(message.getContent());
                     textDeletedStatus.setVisibility(View.VISIBLE);
                     textTimestamp.setVisibility(View.GONE);
                     itemView.setOnLongClickListener(null);
@@ -301,145 +255,98 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
                 }
             }
 
-            // --- MEDIA/FILE TYPE HANDLING ---
+            itemView.setOnLongClickListener(v -> {
+                messageOptionHandler.showMessageOptions(message);
+                return true;
+            });
+
             String type = message.getType() != null ? message.getType().toLowerCase() : "";
             final String content = message.getContent();
-            final String fileName = message.getFileName() != null ? message.getFileName() : type + "_" + message.getTimestamp();
+            String tempFileName = message.getFileName() != null ? message.getFileName() : content;
+
+            if (tempFileName.endsWith(".docs")) {
+                tempFileName = tempFileName.replace(".docs", ".docx");
+            }
+            final String fileName = tempFileName;
 
             boolean isMediaHandled = false;
+            final String mimeType = adapter.getMimeTypeFromFileName(fileName);
 
-            // --- IMAGE ---
-            if ("image".equals(type)) {
+            if ("image".equals(type) && messageImage != null) {
                 messageImage.setVisibility(View.VISIBLE);
                 isMediaHandled = true;
-
-                RequestOptions requestOptions = new RequestOptions().transform(new RoundedCorners(32));
-                Glide.with(itemView.getContext())
-                        .load(content)
-                        .apply(requestOptions)
-                        .into(messageImage);
-
+                Glide.with(itemView.getContext()).load(content)
+                        .apply(new RequestOptions().transform(new RoundedCorners(32))).into(messageImage);
                 messageImage.setOnClickListener(v -> {
                     Intent intent = new Intent(v.getContext(), FullScreenImageActivity.class);
                     intent.putExtra("imageUrl", content);
                     v.getContext().startActivity(intent);
                 });
-
-                // --- AUDIO / FILE / VIDEO ---
             } else if ("file".equals(type) || "video".equals(type) || "audio".equals(type)) {
+                isMediaHandled = true;
 
-                if (content != null && content.startsWith("http")) {
-                    isMediaHandled = true;
+                if ("audio".equals(type) && audioContainer != null) {
+                    audioContainer.setVisibility(View.VISIBLE);
+                    long durationMillis = message.getMediaDuration();
+                    if (durationMillis > 0) {
+                        audioSeekBar.setMax((int) durationMillis);
+                        textAudioDuration.setText(adapter.formatDuration(durationMillis));
+                    } else textAudioDuration.setText("--:--");
+                    audioSeekBar.setProgress(0);
 
-                    // Display as a file container for download (Files, Audio, and Video)
-                    if (fileContainer != null && textFileName != null && iconFileDownload != null) {
+                    if (adapter.currentlyPlayingUrl != null && adapter.currentlyPlayingUrl.equals(content)) {
+                        iconAudioPlay.setImageResource(R.drawable.ic_pause);
+                        adapter.currentAudioHolder = this;
+                        adapter.playbackHandler.post(adapter.updatePlaybackProgress);
+                    } else iconAudioPlay.setImageResource(R.drawable.ic_play_arrow);
 
-                        // For Audio, we prioritize the dedicated audio player view,
-                        // so we only show the file container if it's not audio
-                        if (!"audio".equals(type)) {
-                            fileContainer.setVisibility(View.VISIBLE);
-                        }
+                    iconAudioPlay.setOnClickListener(v -> {
+                        if (adapter.currentlyPlayingUrl != null && adapter.currentlyPlayingUrl.equals(content)) adapter.stopPlayback();
+                        else adapter.startPlayback(this, content);
+                    });
 
-                        // Set text based on actual type
-                        String displayFileName;
-                        if ("file".equals(type)) {
-                            displayFileName = fileName;
-                        } else if ("video".equals(type)) {
-                            displayFileName = "[Video] " + fileName;
-                        } else if ("audio".equals(type)) {
-                            displayFileName = "[Audio Message]"; // Often simplified for voice notes
-                        } else {
-                            displayFileName = fileName;
-                        }
+                } else if (fileContainer != null) {
+                    fileContainer.setVisibility(View.VISIBLE);
+                    textFileName.setText(fileName);
 
-                        textFileName.setText(displayFileName);
-
-                        // UNIVERSAL DOWNLOAD CLICK HANDLER (for file/video)
-                        View downloadTarget = ("file".equals(type) || "video".equals(type)) ? fileContainer : iconFileDownload;
-                        downloadTarget.setOnClickListener(v -> {
-                            if (content != null && fileName != null) {
-                                // DownloadManagerUtils.startDownload(v.getContext(), content, fileName);
-                                Toast.makeText(v.getContext(), "Download started for: " + displayFileName, Toast.LENGTH_SHORT).show();
-                            } else {
-                                Toast.makeText(v.getContext(), "File URL or name missing.", Toast.LENGTH_SHORT).show();
-                            }
-                        });
+                    if (iconFile != null) {
+                        String lowerName = fileName.toLowerCase();
+                        if (lowerName.endsWith(".pdf") || lowerName.endsWith(".doc") || lowerName.endsWith(".docx") || lowerName.endsWith(".xls"))
+                            iconFile.setImageResource(R.drawable.ic_file_document);
+                        else iconFile.setImageResource(R.drawable.ic_file_document);
                     }
 
-                    // Specific Audio Playback Control
-                    if ("audio".equals(type) && audioContainer != null && iconAudioPlay != null) {
-                        audioContainer.setVisibility(View.VISIBLE);
-
-                        long durationMillis = message.getMediaDuration();
-
-                        // Set duration display and max progress
-                        if (durationMillis > 0) {
-                            audioSeekBar.setMax((int) durationMillis);
-                            textAudioDuration.setText(adapter.formatDuration(durationMillis));
-                        } else {
-                            textAudioDuration.setText("--:--");
-                        }
-                        audioSeekBar.setProgress(0);
-
-                        // Handle audio playback icons
-                        if (adapter.currentlyPlayingUrl != null && adapter.currentlyPlayingUrl.equals(content)) {
-                            iconAudioPlay.setImageResource(R.drawable.ic_pause);
-                            adapter.currentAudioHolder = this;
-                            adapter.playbackHandler.post(adapter.updatePlaybackProgress);
-                        } else {
-                            iconAudioPlay.setImageResource(R.drawable.ic_play_arrow);
-                        }
-
-                        // Play/Pause Click Handler
-                        iconAudioPlay.setOnClickListener(v -> {
-                            if (adapter.currentlyPlayingUrl != null && adapter.currentlyPlayingUrl.equals(content)) {
-                                adapter.stopPlayback();
-                            } else {
-                                adapter.startPlayback(this, content);
-                            }
-                        });
-
-                        // Long press to download audio
-                        audioContainer.setOnLongClickListener(v -> {
-                            Toast.makeText(v.getContext(), "Download started for Audio.", Toast.LENGTH_SHORT).show();
-                            return true;
-                        });
+                    if (iconFileDownload != null) {
+                        iconFileDownload.setVisibility(View.VISIBLE);
+                        iconFileDownload.setOnClickListener(v -> adapter.downloadListener.onFileDownloadRequested(content, fileName, mimeType));
                     }
                 }
             }
 
-            // --- FINAL TEXT FALLBACK ---
             if (!isMediaHandled) {
                 messageText.setVisibility(View.VISIBLE);
                 messageText.setText(content);
             }
-            // ---------------------------------------------
 
-            // Bind Timestamp
             SimpleDateFormat formatter = new SimpleDateFormat("h:mm a", Locale.getDefault());
             textTimestamp.setText(formatter.format(new Date(message.getTimestamp())));
 
-            // Bind Seen Status
-            if (viewType == VIEW_TYPE_SENT) {
-                if (iconSeenStatus == null) return;
+            if (viewType == VIEW_TYPE_SENT && iconSeenStatus != null) {
                 iconSeenStatus.setVisibility(View.VISIBLE);
                 Context context = itemView.getContext();
+                Drawable drawable = ContextCompat.getDrawable(context, R.drawable.ic_check_double);
 
-                if (message.isSeen()) {
-                    DrawableCompat.setTint(
-                            iconSeenStatus.getDrawable(),
-                            ContextCompat.getColor(context, R.color.deep_purple)
-                    );
-                } else {
-                    DrawableCompat.setTint(
-                            iconSeenStatus.getDrawable(),
-                            ContextCompat.getColor(context, R.color.inactive_gray)
-                    );
+                if (drawable != null) {
+                    drawable = DrawableCompat.wrap(drawable.mutate());
+                    if (message.isSeen()) {
+                        DrawableCompat.setTint(drawable, ContextCompat.getColor(context, R.color.deep_purple));
+                    } else {
+                        DrawableCompat.setTint(drawable, ContextCompat.getColor(context, R.color.inactive_gray));
+                    }
+                    iconSeenStatus.setImageDrawable(drawable);
                 }
             } else {
-                if (iconSeenStatus != null) {
-                    iconSeenStatus.setVisibility(View.GONE);
-                }
+                if (iconSeenStatus != null) iconSeenStatus.setVisibility(View.GONE);
             }
         }
     }

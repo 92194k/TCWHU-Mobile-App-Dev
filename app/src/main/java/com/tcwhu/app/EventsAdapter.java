@@ -39,8 +39,7 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.EventViewH
 
     @Override
     public void onBindViewHolder(@NonNull EventViewHolder holder, int position) {
-        Event event = eventList.get(position);
-        holder.bind(event, clickListener);
+        holder.bind(eventList.get(position), clickListener);
     }
 
     @Override
@@ -67,14 +66,10 @@ public class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.EventViewH
             eventPostedByTextView.setText("Posted by " + event.getPostedBy());
 
             SimpleDateFormat formatter = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.US);
-            String formattedDate = formatter.format(new Date(event.getDate()));
-            eventDateTextView.setText(formattedDate);
+            eventDateTextView.setText(formatter.format(new Date(event.getDate())));
 
             if (event.getImageUrl() != null && !event.getImageUrl().isEmpty()) {
-                RequestOptions requestOptions = new RequestOptions().transform(
-                        new CenterCrop(),
-                        new RoundedCorners(16)
-                );
+                RequestOptions requestOptions = new RequestOptions().transform(new CenterCrop(), new RoundedCorners(16));
                 Glide.with(itemView.getContext())
                         .load(event.getImageUrl())
                         .apply(requestOptions)

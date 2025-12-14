@@ -1,7 +1,7 @@
 package com.tcwhu.app;
 
 import com.google.firebase.firestore.Exclude;
-import java.io.Serializable; // <-- IMPORT ADDED
+import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -39,7 +39,6 @@ public class Event implements Serializable {
         this.icon = icon;
     }
 
-    // --- Getters & Setters ---
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 

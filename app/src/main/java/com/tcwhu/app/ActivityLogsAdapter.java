@@ -4,10 +4,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -16,12 +14,11 @@ import java.util.Locale;
 public class ActivityLogsAdapter extends RecyclerView.Adapter<ActivityLogsAdapter.ViewHolder> {
 
     private List<ActivityLog> logList;
+    private OnItemClickListener listener;
 
     public interface OnItemClickListener {
         void onItemClick(ActivityLog log);
     }
-    private OnItemClickListener listener;
-
 
     public ActivityLogsAdapter(List<ActivityLog> logList, OnItemClickListener listener) {
         this.logList = logList;
@@ -64,19 +61,12 @@ public class ActivityLogsAdapter extends RecyclerView.Adapter<ActivityLogsAdapte
         }
 
         public void bind(final ActivityLog log, final OnItemClickListener listener) {
-            // Get Admin Nickname
-            String adminNickname = log.getAdminId();
-
-            // Main info
             textAction.setText(log.getAction());
-            // CRITICAL FIX: Display the actual nickname
-            textAdminId.setText("Logged by: " + adminNickname);
+            textAdminId.setText("Logged by: " + log.getAdminId());
 
-            // Timestamp
             SimpleDateFormat formatter = new SimpleDateFormat("MMM d, yyyy, h:mm a", Locale.US);
             textTimestamp.setText(formatter.format(new Date(log.getTimestamp())));
 
-            // Set Icons
             String action = log.getAction().toLowerCase();
             if (action.contains("ban") || action.contains("suspend")) {
                 textLogIcon.setText("🚫");
@@ -88,7 +78,6 @@ public class ActivityLogsAdapter extends RecyclerView.Adapter<ActivityLogsAdapte
                 textLogIcon.setText("📝");
             }
 
-            // Show Target ID
             if (log.getTargetId() != null && !log.getTargetId().isEmpty()) {
                 textTargetId.setText("Target ID: " + safeTrim(log.getTargetId()));
                 textTargetId.setVisibility(View.VISIBLE);

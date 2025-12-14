@@ -1,26 +1,32 @@
 package com.tcwhu.app;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
-
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class SplashActivity extends AppCompatActivity {
 
-    private static final int SPLASH_DELAY = 2000;
+    private static final int SPLASH_DELAY = 1500;
+    private static final int PERMISSION_REQUEST_CODE = 10;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
@@ -32,6 +38,45 @@ public class SplashActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
+        checkAndRequestPermissions();
+    }
+
+    private void checkAndRequestPermissions() {
+        List<String> requiredPermissions = new ArrayList<>();
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requiredPermissions.add(Manifest.permission.RECORD_AUDIO);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                requiredPermissions.add(Manifest.permission.READ_MEDIA_IMAGES);
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requiredPermissions.add(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requiredPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+            }
+        }
+
+        if (!requiredPermissions.isEmpty()) {
+            ActivityCompat.requestPermissions(this, requiredPermissions.toArray(new String[0]), PERMISSION_REQUEST_CODE);
+        } else {
+            startAppFlow();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            startAppFlow();
+        }
+    }
+
+    private void startAppFlow() {
         new Handler(Looper.getMainLooper()).postDelayed(this::checkUserStatus, SPLASH_DELAY);
     }
 
@@ -43,70 +88,46 @@ public class SplashActivity extends AppCompatActivity {
             return;
         }
 
-        // A user is signed in, check their Firestore document
         db.collection("users").document(currentUser.getUid()).get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult().exists()) {
                         DocumentSnapshot doc = task.getResult();
                         Student student = doc.toObject(Student.class);
 
-                        if (student == null) { // Safety check
+                        if (student == null) {
                             navigateTo(LandingActivity.class);
                             return;
                         }
 
-                        // --- CHECKS ARE NOW IN THE CORRECT ORDER ---
-
-                        // 1. Check for DELETION REQUEST (Highest Priority)
                         if (student.isDeletionRequested()) {
-                            String message = "Your account is pending deletion. To cancel this request, please email alaokhemberly@gmail.com.";
-                            navigateToSuspendedScreen(message); // This logs them out and shows the banned page
+                            navigateToSuspendedScreen("Account pending deletion. Contact support to cancel.");
                             return;
                         }
 
-                        // 2. Check for BANS
                         if (student.isBanned()) {
-                            String dateString = "permanently";
-                            if (student.getDeletionDate() > 0) {
-                                dateString = "until " + formatDate(student.getDeletionDate());
-                            }
-                            String message = "Your account is banned " + dateString + ". It will be deleted after this date.";
-                            navigateToSuspendedScreen(message);
+                            String msg = "Account banned permanently.";
+                            if (student.getDeletionDate() > 0) msg += " Deletion on: " + formatDate(student.getDeletionDate());
+                            navigateToSuspendedScreen(msg);
                             return;
                         }
 
-                        // 3. Check for SUSPENSIONS
                         if (student.isSuspended()) {
-                            long now = System.currentTimeMillis();
-                            if (now < student.getSuspendEndDate()) {
-                                // Suspension is still active
-                                String dateString = "for 1 week.";
-                                if (student.getSuspendEndDate() > 0) {
-                                    dateString = "until " + formatDate(student.getSuspendEndDate());
-                                }
-                                String message = "Your account is suspended " + dateString;
-                                navigateToSuspendedScreen(message);
+                            if (System.currentTimeMillis() < student.getSuspendEndDate()) {
+                                navigateToSuspendedScreen("Account suspended until " + formatDate(student.getSuspendEndDate()));
                                 return;
                             } else {
-                                // Suspension is over! Auto-unsuspend them.
-                                Log.d("SplashActivity", "Suspension ended. Re-activating user.");
                                 doc.getReference().update("isSuspended", false, "suspendEndDate", 0);
-                                // Continue to the next check
                             }
                         }
 
-                        // 4. Check for Verification (Last)
                         if (student.isVerified()) {
-                            // User is signed in, verified, and not banned/suspended
                             navigateTo(StudentHomeActivity.class);
                         } else {
-                            // User is signed in but NOT verified
                             navigateTo(PendingVerificationActivity.class);
                         }
 
                     } else {
-                        // User is in Auth but not Firestore (admin deleted doc)
-                        Toast.makeText(this, "Your account no longer exists.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Account not found.", Toast.LENGTH_SHORT).show();
                         navigateTo(LandingActivity.class);
                     }
                 });
@@ -115,19 +136,16 @@ public class SplashActivity extends AppCompatActivity {
     private void navigateTo(Class<?> activityClass) {
         Intent intent = new Intent(SplashActivity.this, activityClass);
         startActivity(intent);
-        finish(); // Close the splash activity
+        finish();
     }
 
     private String formatDate(long timestamp) {
-        if (timestamp == 0) return "an unknown date";
-        SimpleDateFormat sdf = new SimpleDateFormat("MMM d, yyyy", Locale.getDefault());
-        return sdf.format(new Date(timestamp));
+        if (timestamp == 0) return "unknown date";
+        return new SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(new Date(timestamp));
     }
 
     private void navigateToSuspendedScreen(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-        mAuth.signOut(); // Log them out
-
+        mAuth.signOut();
         Intent intent = new Intent(SplashActivity.this, AccountSuspendedActivity.class);
         intent.putExtra("STATUS_MESSAGE", message);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

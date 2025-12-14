@@ -8,37 +8,19 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class LandingActivity extends AppCompatActivity {
 
-    private Button buttonStudentLogin, buttonStudentSignUp, buttonAdminLogin;
-    private TextView textPrivacyPolicy;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_landing);
 
-        buttonStudentLogin = findViewById(R.id.buttonStudentLogin);
-        buttonStudentSignUp = findViewById(R.id.buttonStudentSignUp);
-        buttonAdminLogin = findViewById(R.id.buttonAdminLogin);
-        textPrivacyPolicy = findViewById(R.id.textPrivacyPolicy);
+        Button buttonStudentLogin = findViewById(R.id.buttonStudentLogin);
+        Button buttonStudentSignUp = findViewById(R.id.buttonStudentSignUp);
+        Button buttonAdminLogin = findViewById(R.id.buttonAdminLogin);
+        TextView textPrivacyPolicy = findViewById(R.id.textPrivacyPolicy);
 
-        buttonStudentLogin.setOnClickListener(v -> {
-            Intent intent = new Intent(LandingActivity.this, StudentLoginActivity.class);
-            startActivity(intent);
-        });
-
-        buttonStudentSignUp.setOnClickListener(v -> {
-            Intent intent = new Intent(LandingActivity.this, StudentSignUpActivity.class);
-            startActivity(intent);
-        });
-
-        buttonAdminLogin.setOnClickListener(v -> {
-            Intent intent = new Intent(LandingActivity.this, AdminLoginActivity.class);
-            startActivity(intent);
-        });
-
-        textPrivacyPolicy.setOnClickListener(v -> {
-            Intent intent = new Intent(LandingActivity.this, PrivacyPolicyActivity.class);
-            startActivity(intent);
-        });
+        buttonStudentLogin.setOnClickListener(v -> startActivity(new Intent(LandingActivity.this, StudentLoginActivity.class)));
+        buttonStudentSignUp.setOnClickListener(v -> startActivity(new Intent(LandingActivity.this, StudentSignUpActivity.class)));
+        buttonAdminLogin.setOnClickListener(v -> startActivity(new Intent(LandingActivity.this, AdminLoginActivity.class)));
+        textPrivacyPolicy.setOnClickListener(v -> startActivity(new Intent(LandingActivity.this, PrivacyPolicyActivity.class)));
     }
 }

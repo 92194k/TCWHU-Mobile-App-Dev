@@ -1,6 +1,5 @@
 package com.tcwhu.app;
 
-import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -12,16 +11,13 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.bumptech.glide.Glide;
-import com.canhub.cropper.CropImage;
 import com.canhub.cropper.CropImageContract;
 import com.canhub.cropper.CropImageContractOptions;
 import com.canhub.cropper.CropImageOptions;
@@ -37,7 +33,6 @@ import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -63,7 +58,6 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
     private ImageView dialogImagePreview = null;
     private AlertDialog currentDialog = null;
 
-    // CropImage CanHub
     private final ActivityResultLauncher<CropImageContractOptions> cropImageLauncher =
             registerForActivityResult(new CropImageContract(), this::handleCropImageResult);
 
@@ -73,18 +67,21 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
         setContentView(R.layout.activity_events_management);
 
         db = FirebaseFirestore.getInstance();
+        initViews();
+        setupRecyclerView();
+
+        fabAddEvent.setOnClickListener(v -> showAddEventDialog());
+    }
+
+    private void initViews() {
         recyclerView = findViewById(R.id.eventsRecyclerView);
         emptyView = findViewById(R.id.emptyView);
         fabAddEvent = findViewById(R.id.fabAddEvent);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
-
-        setupRecyclerView();
-
-        fabAddEvent.setOnClickListener(v -> showAddEventDialog());
     }
 
     @Override
@@ -102,12 +99,8 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-                if (dy > 0 && fabAddEvent.isShown()) {
-                    fabAddEvent.hide();
-                } else if (dy < 0 && !fabAddEvent.isShown()) {
-                    fabAddEvent.show();
-                }
+                if (dy > 0 && fabAddEvent.isShown()) fabAddEvent.hide();
+                else if (dy < 0 && !fabAddEvent.isShown()) fabAddEvent.show();
             }
         });
     }
@@ -147,7 +140,6 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
         dialogImagePreview = dialogView.findViewById(R.id.imageEventPreview);
         MaterialButton buttonUploadEventImage = dialogView.findViewById(R.id.buttonUploadEventImage);
 
-        // DATE PICKER
         MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker().build();
         datePicker.addOnPositiveButtonClickListener(selection -> {
             TimeZone timeZoneUTC = TimeZone.getDefault();
@@ -158,24 +150,17 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
         });
         inputDate.setOnClickListener(v -> datePicker.show(getSupportFragmentManager(), "DATE_PICKER"));
 
-        // IMAGE CROPPER
         buttonUploadEventImage.setOnClickListener(v -> {
             CropImageOptions cropOptions = new CropImageOptions();
             cropOptions.guidelines = CropImageView.Guidelines.ON;
             cropOptions.aspectRatioX = 16;
             cropOptions.aspectRatioY = 9;
             cropOptions.fixAspectRatio = true;
-            cropOptions.showCropOverlay = true;
-            cropOptions.allowRotation = true;
-            cropOptions.activityTitle = "Crop Event Photo";
-            cropOptions.activityMenuIconColor = getResources().getColor(R.color.white);
-
-            CropImageContractOptions contractOptions = new CropImageContractOptions(null, cropOptions);
-            cropImageLauncher.launch(contractOptions);
+            cropImageLauncher.launch(new CropImageContractOptions(null, cropOptions));
         });
 
         currentDialog = builder.setPositiveButton("Create", null)
-                .setNegativeButton("Cancel", (dialogInterface, i) -> dialogInterface.dismiss())
+                .setNegativeButton("Cancel", (d, i) -> d.dismiss())
                 .create();
 
         currentDialog.setOnShowListener(dialogInterface -> {
@@ -185,13 +170,10 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
                 String desc = inputDesc.getText().toString().trim();
                 String postedBy = inputPostedBy.getText().toString().trim();
 
-                boolean isValid = true;
-                if (title.isEmpty()) { inputTitle.setError("Title is required"); isValid=false; } else inputTitle.setError(null);
-                if (desc.isEmpty()) { inputDesc.setError("Description is required"); isValid=false; } else inputDesc.setError(null);
-                if (selectedDateMillis == 0) { inputDate.setError("Date is required"); isValid=false; } else inputDate.setError(null);
-                if (postedBy.isEmpty()) { inputPostedBy.setError("Posted By is required"); isValid=false; } else inputPostedBy.setError(null);
-
-                if (!isValid) return;
+                if (title.isEmpty() || desc.isEmpty() || selectedDateMillis == 0 || postedBy.isEmpty()) {
+                    Toast.makeText(this, "All fields are required.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
                 if (selectedImageUri != null) {
                     positiveButton.setEnabled(false);
@@ -203,31 +185,21 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
                 }
             });
         });
-
         currentDialog.show();
     }
 
     private void handleCropImageResult(CropImageView.CropResult result) {
         if (result.isSuccessful()) {
             selectedImageUri = result.getUriContent();
-            if (selectedImageUri == null) {
-                Toast.makeText(this, "Failed to get cropped image", Toast.LENGTH_SHORT).show();
-                return;
+            if (selectedImageUri != null && getFileSize(selectedImageUri) <= MAX_FILE_SIZE_BYTES) {
+                if (dialogImagePreview != null) {
+                    dialogImagePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    Glide.with(this).load(selectedImageUri).into(dialogImagePreview);
+                    if (currentDialog != null) currentDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                }
+            } else {
+                Toast.makeText(this, "Image too large or invalid.", Toast.LENGTH_SHORT).show();
             }
-            if (getFileSize(selectedImageUri) > MAX_FILE_SIZE_BYTES) {
-                Toast.makeText(this, "Image is too large. Max " + MAX_FILE_SIZE_MB + "MB.", Toast.LENGTH_LONG).show();
-                selectedImageUri = null;
-                return;
-            }
-            if (dialogImagePreview != null) {
-                dialogImagePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                dialogImagePreview.setPadding(0,0,0,0);
-                Glide.with(this).load(selectedImageUri).into(dialogImagePreview);
-                if (currentDialog != null)
-                    currentDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
-            }
-        } else if (result.getError() != null) {
-            Toast.makeText(this, "Cropping failed: " + result.getError().getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -242,11 +214,7 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
     }
 
     private void uploadEventImage(Uri imageUri, String title, String desc, String postedBy) {
-        String uniqueId = UUID.randomUUID().toString();
-        String publicId = "event_photos/" + uniqueId;
-
-        Toast.makeText(this, "Uploading image...", Toast.LENGTH_LONG).show();
-
+        String publicId = "event_photos/" + UUID.randomUUID().toString();
         MediaManager.get().upload(imageUri)
                 .option("public_id", publicId)
                 .callback(new UploadCallback() {
@@ -254,16 +222,15 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
                         String url = (String) resultData.get("secure_url");
                         addEventToFirestore(title, desc, postedBy, url);
                         if (currentDialog != null) currentDialog.dismiss();
-                        Toast.makeText(EventsManagementActivity.this, "Event created successfully!", Toast.LENGTH_LONG).show();
+                        Toast.makeText(EventsManagementActivity.this, "Event created.", Toast.LENGTH_SHORT).show();
                     }
                     @Override public void onError(String requestId, ErrorInfo error) {
-                        if (currentDialog != null)
-                            currentDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
-                        Toast.makeText(EventsManagementActivity.this, "Image upload failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
+                        if (currentDialog != null) currentDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                        Toast.makeText(EventsManagementActivity.this, "Upload failed.", Toast.LENGTH_SHORT).show();
                     }
-                    @Override public void onStart(String requestId) {}
-                    @Override public void onProgress(String requestId, long bytes, long totalBytes) {}
-                    @Override public void onReschedule(String requestId, ErrorInfo error) {}
+                    @Override public void onStart(String r) {}
+                    @Override public void onProgress(String r, long b, long t) {}
+                    @Override public void onReschedule(String r, ErrorInfo e) {}
                 }).dispatch();
     }
 
@@ -280,37 +247,10 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
                 .addOnFailureListener(e -> Toast.makeText(this, "Error saving event.", Toast.LENGTH_SHORT).show());
     }
 
-    private void showDeleteConfirmationDialog(Event event) {
-        new AlertDialog.Builder(this)
-                .setTitle("Delete Event")
-                .setMessage("Are you sure you want to delete this event?")
-                .setPositiveButton("Yes", (dialog, which) -> deleteEvent(event))
-                .setNegativeButton("No", null)
-                .show();
-    }
-
-    private void deleteEvent(Event event) {
-        if (event.getId() == null || event.getId().isEmpty()) {
-            Toast.makeText(this, "Cannot delete event (missing ID).", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        db.collection("events").document(event.getId())
-                .delete()
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "Event deleted successfully", Toast.LENGTH_SHORT).show();
-                    loadEvents();
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete event: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-    }
-
     private void checkIfEmpty() {
-        if (eventList.isEmpty()) {
-            emptyView.setVisibility(View.VISIBLE);
-            recyclerView.setVisibility(View.GONE);
-        } else {
-            emptyView.setVisibility(View.GONE);
-            recyclerView.setVisibility(View.VISIBLE);
-        }
+        boolean isEmpty = eventList.isEmpty();
+        emptyView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+        recyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
     }
 
     @Override
@@ -322,6 +262,17 @@ public class EventsManagementActivity extends AppCompatActivity implements Event
 
     @Override
     public void onDelete(Event event) {
-        showDeleteConfirmationDialog(event);
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Event")
+                .setMessage("Are you sure you want to delete this event?")
+                .setPositiveButton("Yes", (dialog, which) -> {
+                    db.collection("events").document(event.getId()).delete()
+                            .addOnSuccessListener(a -> {
+                                Toast.makeText(this, "Event deleted.", Toast.LENGTH_SHORT).show();
+                                loadEvents();
+                            });
+                })
+                .setNegativeButton("No", null)
+                .show();
     }
 }

@@ -1,8 +1,6 @@
 package com.tcwhu.app;
 
 import android.os.Bundle;
-import android.text.InputType;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -15,11 +13,9 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-
 import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class AdminSettingsActivity extends AppCompatActivity implements AdminAccountsAdapter.OnRemoveListener {
@@ -41,12 +37,13 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
         db = FirebaseFirestore.getInstance();
         recyclerView = findViewById(R.id.adminsRecyclerView);
         textCurrentAccess = findViewById(R.id.textCurrentAccess);
+
         Button buttonChangeAccess = findViewById(R.id.buttonChangeAccess);
         Button buttonAddAdmin = findViewById(R.id.buttonAddAdmin);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
         setupRecyclerView();
@@ -57,7 +54,6 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
         buttonAddAdmin.setOnClickListener(v -> showAddAdminDialog());
     }
 
-    // Access Code Logic
     private void loadAccessCode() {
         db.collection("settings").document(ACCESS_CODE_DOC_ID).get()
                 .addOnSuccessListener(documentSnapshot -> {
@@ -65,15 +61,10 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
                         currentAccessCode = documentSnapshot.getString("code");
                     }
                     updateAccessCodeDisplay();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Failed to load access code.", Toast.LENGTH_SHORT).show();
-                    updateAccessCodeDisplay();
                 });
     }
 
     private void updateAccessCodeDisplay() {
-        // Masked access code
         String maskedCode = new String(new char[currentAccessCode.length()]).replace('\0', '•');
         textCurrentAccess.setText(maskedCode);
     }
@@ -85,9 +76,8 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
                 .addOnSuccessListener(aVoid -> {
                     currentAccessCode = newCode;
                     updateAccessCodeDisplay();
-                    Toast.makeText(this, "Access code has been updated successfully.", Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Unable to update the access code. Please try again", Toast.LENGTH_SHORT).show());
+                    Toast.makeText(this, "Access code updated.", Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void showChangeAccessCodeDialog() {
@@ -95,9 +85,7 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
         TextInputEditText input = dialogView.findViewById(R.id.inputNewAccessCode);
         Button buttonUpdate = dialogView.findViewById(R.id.buttonUpdateAccess);
 
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setView(dialogView)
-                .create();
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dialogView).create();
 
         buttonUpdate.setOnClickListener(v -> {
             String newCode = input.getText().toString().trim();
@@ -105,13 +93,12 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
                 saveAccessCode(newCode);
                 dialog.dismiss();
             } else {
-                input.setError("Access code must be at least 4 digits.");
+                input.setError("Must be at least 4 digits.");
             }
         });
         dialog.show();
     }
 
-    // Admin Account Logic
     private void setupRecyclerView() {
         adminList = new ArrayList<>();
         adapter = new AdminAccountsAdapter(adminList, this);
@@ -125,13 +112,15 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
                     if (task.isSuccessful()) {
                         adminList.clear();
                         for (QueryDocumentSnapshot document : task.getResult()) {
-                            AdminAccount admin = document.toObject(AdminAccount.class);
-                            admin.setId(document.getId());
-                            adminList.add(admin);
+                            try {
+                                AdminAccount admin = document.toObject(AdminAccount.class);
+                                if (admin != null && admin.getEmail() != null) {
+                                    admin.setId(document.getId());
+                                    adminList.add(admin);
+                                }
+                            } catch (Exception ignored) {}
                         }
                         adapter.notifyDataSetChanged();
-                    } else {
-                        Toast.makeText(this, "Unable to load admin accounts.", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -142,9 +131,7 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
         TextInputEditText inputRole = dialogView.findViewById(R.id.inputAdminRole);
         Button buttonAdd = dialogView.findViewById(R.id.buttonAddAdmin);
 
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setView(dialogView)
-                .create();
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dialogView).create();
 
         buttonAdd.setOnClickListener(v -> {
             String email = inputEmail.getText().toString().trim();
@@ -153,7 +140,7 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
                 addAdminAccount(email, role);
                 dialog.dismiss();
             } else {
-                Toast.makeText(this, "Please complete all required fields.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Complete all fields.", Toast.LENGTH_SHORT).show();
             }
         });
         dialog.show();
@@ -165,20 +152,18 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
         newAdmin.setRole(role);
         newAdmin.setAddedDate(System.currentTimeMillis());
 
-        // Adding Admin
         db.collection("admins").add(newAdmin)
-                .addOnSuccessListener(documentReference -> {
-                    Toast.makeText(this, "Admin account has been added successfully.", Toast.LENGTH_SHORT).show();
+                .addOnSuccessListener(ref -> {
+                    Toast.makeText(this, "Admin added.", Toast.LENGTH_SHORT).show();
                     loadAdminAccounts();
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Unable to add admin account. Please try again", Toast.LENGTH_SHORT).show());
+                });
     }
 
     @Override
     public void onRemoveClick(AdminAccount admin) {
         new AlertDialog.Builder(this)
                 .setTitle("Remove Admin?")
-                .setMessage("This will permanently revoke admin access for " + admin.getEmail() + ".")
+                .setMessage("Revoke access for " + admin.getEmail() + "?")
                 .setPositiveButton("Remove", (dialog, which) -> deleteAdminAccount(admin))
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -187,9 +172,8 @@ public class AdminSettingsActivity extends AppCompatActivity implements AdminAcc
     private void deleteAdminAccount(AdminAccount admin) {
         db.collection("admins").document(admin.getId()).delete()
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, admin.getEmail() + " access revoked.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Access revoked.", Toast.LENGTH_SHORT).show();
                     loadAdminAccounts();
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to remove admin access.", Toast.LENGTH_SHORT).show());
+                });
     }
 }

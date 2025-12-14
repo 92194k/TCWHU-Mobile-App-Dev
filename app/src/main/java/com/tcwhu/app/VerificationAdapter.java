@@ -72,10 +72,8 @@ public class VerificationAdapter extends RecyclerView.Adapter<VerificationAdapte
             textEmail.setText("Email: " + emailAddress);
             textYearLevel.setText("Year Level: " + student.getYearLevel());
 
-            // --- CRITICAL FIX: Make the TextView itself clickable --- ✅
             textEmail.setOnClickListener(v -> launchEmailClient(context, emailAddress));
 
-            // Load images with Glide
             if (student.getSelfiePhotoUrl() != null && !student.getSelfiePhotoUrl().isEmpty()) {
                 Glide.with(context).load(student.getSelfiePhotoUrl()).into(selfiePhotoPreview);
                 selfiePhotoPreview.setOnClickListener(v -> openPhotoViewer(context, student.getSelfiePhotoUrl()));
@@ -100,7 +98,7 @@ public class VerificationAdapter extends RecyclerView.Adapter<VerificationAdapte
                 Intent emailIntent = new Intent(Intent.ACTION_SENDTO);
                 emailIntent.setData(Uri.parse("mailto:" + emailAddress));
                 emailIntent.putExtra(Intent.EXTRA_SUBJECT, "TCWHU Account Verification Status");
-                emailIntent.putExtra(Intent.EXTRA_TEXT, "Dear Admin,\n\nI have reviewed your account details. Please log in to complete your account setup.");
+                emailIntent.putExtra(Intent.EXTRA_TEXT, "Dear Student,\n\nRegarding your account verification...");
 
                 try {
                     context.startActivity(emailIntent);

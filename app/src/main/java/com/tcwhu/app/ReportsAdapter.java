@@ -20,7 +20,7 @@ public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHold
     }
 
     private List<Report> reportList;
-    private Map<String, String> userNicknameMap; // Map of userId -> nickname
+    private Map<String, String> userNicknameMap;
     private OnActionListener listener;
 
     public ReportsAdapter(List<Report> reportList, Map<String, String> userNicknameMap, OnActionListener listener) {
@@ -60,9 +60,17 @@ public class ReportsAdapter extends RecyclerView.Adapter<ReportsAdapter.ViewHold
         }
 
         public void bind(final Report report, final Map<String, String> userNicknameMap, final OnActionListener listener) {
-            String reporterName = userNicknameMap.getOrDefault(report.getReporterId(), "Unknown User");
-            String reportedName = userNicknameMap.getOrDefault(report.getReportedUserId(), "Unknown User");
+            String reporterName = "Unknown User";
+            if (userNicknameMap != null && report.getReporterId() != null) {
+                String name = userNicknameMap.get(report.getReporterId());
+                if (name != null) reporterName = name;
+            }
 
+            String reportedName = "Unknown User";
+            if (userNicknameMap != null && report.getReportedUserId() != null) {
+                String name = userNicknameMap.get(report.getReportedUserId());
+                if (name != null) reportedName = name;
+            }
 
             reportTitle.setText("Report from " + reporterName);
 

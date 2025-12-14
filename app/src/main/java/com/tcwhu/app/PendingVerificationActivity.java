@@ -6,7 +6,6 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
@@ -33,7 +32,6 @@ public class PendingVerificationActivity extends AppCompatActivity {
         FirebaseUser currentUser = mAuth.getCurrentUser();
 
         if (currentUser == null) {
-            // If user is somehow null, go back to landing
             navigateToLogin();
             return;
         }
@@ -43,67 +41,52 @@ public class PendingVerificationActivity extends AppCompatActivity {
         ImageView clockIcon = findViewById(R.id.clockIcon);
 
         Animation rotateAnimation = AnimationUtils.loadAnimation(this, R.anim.rotate_clock);
-        if (clockIcon != null) {
-            clockIcon.startAnimation(rotateAnimation);
-        }
+        if (clockIcon != null) clockIcon.startAnimation(rotateAnimation);
 
-        // This button logs the user out
         buttonBackToHome.setOnClickListener(v -> {
             mAuth.signOut();
             navigateToLogin();
         });
     }
 
-    // --- ADDED: Start listening when the activity is visible ---
     @Override
     protected void onResume() {
         super.onResume();
         attachVerificationListener();
     }
 
-    // --- ADDED: Stop listening when the activity is not visible ---
     @Override
     protected void onPause() {
         super.onPause();
-        if (userListener != null) {
-            userListener.remove();
-        }
+        if (userListener != null) userListener.remove();
     }
 
-    // --- ADDED: This method actively listens for the admin's approval ---
     private void attachVerificationListener() {
         if (currentUserId == null) return;
 
         DocumentReference userDoc = db.collection("users").document(currentUserId);
         userListener = userDoc.addSnapshotListener(this, (snapshot, e) -> {
-            if (e != null) {
-                // Error listening
-                return;
-            }
+            if (e != null) return;
 
             if (snapshot != null && snapshot.exists()) {
                 Student student = snapshot.toObject(Student.class);
                 if (student != null && student.isVerified()) {
-                    // --- VERIFICATION DETECTED ---
-                    if (userListener != null) {
-                        userListener.remove(); // Stop listening
-                    }
+                    if (userListener != null) userListener.remove();
                     showVerificationSuccessDialog();
                 }
             }
         });
     }
 
-    // --- ADDED: This dialog congratulates the user ---
     private void showVerificationSuccessDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Account Verified!")
-                .setMessage("Congratulations! Your account has been approved by an admin. You will now be logged out. Please log in again to continue.")
+                .setMessage("Your account has been approved. You will now be logged out. Please log in again to continue.")
                 .setPositiveButton("OK", (dialog, which) -> {
                     mAuth.signOut();
                     navigateToLogin();
                 })
-                .setCancelable(false) // User cannot close this dialog
+                .setCancelable(false)
                 .show();
     }
 

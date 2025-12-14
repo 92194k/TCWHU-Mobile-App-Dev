@@ -4,22 +4,17 @@ import android.graphics.Typeface;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-
 
 public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHolder> {
 
@@ -37,69 +32,31 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
         this.studentMap = studentMap;
         this.listener = listener;
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null) {
-            this.currentUserId = user.getUid();
-        }
-    }
-
-    // NOTE: cleanDeletedUsers is currently unused but kept for completeness.
-    private void cleanDeletedUsers() {
-        if (chatList == null || studentMap == null || currentUserId == null) return;
-
-        Iterator<Chat> iterator = chatList.iterator();
-        while (iterator.hasNext()) {
-            Chat chat = iterator.next();
-
-            if (chat.getUsers() == null || chat.getUsers().isEmpty()) {
-                iterator.remove();
-                continue;
-            }
-
-            String otherUserId = null;
-            for (String id : chat.getUsers()) {
-                if (!id.equals(currentUserId)) {
-                    otherUserId = id;
-                    break;
-                }
-            }
-
-            // Check if user is missing or potentially blocked/deleted
-            if (otherUserId == null || !studentMap.containsKey(otherUserId)) {
-                iterator.remove();
-            }
-        }
+        if (user != null) this.currentUserId = user.getUid();
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // NOTE: Assumes R.layout.item_chat_list exists
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_chat_list, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_chat_list, parent, false);
         return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Chat chat = chatList.get(position);
-
-        if (chat.getUsers() == null || chat.getUsers().isEmpty() || currentUserId == null) {
-            holder.hideItem();
-            return;
-        }
-
         String otherUserId = null;
-        for (String id : chat.getUsers()) {
-            if (!id.equals(currentUserId)) {
-                otherUserId = id;
-                break;
+        if (chat.getUsers() != null) {
+            for (String id : chat.getUsers()) {
+                if (!id.equals(currentUserId)) {
+                    otherUserId = id;
+                    break;
+                }
             }
         }
 
         Student otherUser = studentMap.get(otherUserId);
-
-        // CRITICAL: Ensure otherUser exists before binding
-        if (otherUser != null) {
+        if (otherUser != null && currentUserId != null) {
             holder.showItem();
             holder.bind(otherUser, chat, listener, otherUserId, currentUserId);
         } else {
@@ -114,19 +71,13 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView textAvatar, textNickname, textLastMessage, textTime;
-        FrameLayout avatarContainer;
-        LinearLayout itemLayout; // Assuming the whole item is in a layout
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            // NOTE: Assumes R.id.textAvatar, R.id.textNickname, etc. exist
             textAvatar = itemView.findViewById(R.id.textAvatar);
             textNickname = itemView.findViewById(R.id.textNickname);
             textLastMessage = itemView.findViewById(R.id.textLastMessage);
             textTime = itemView.findViewById(R.id.textTime);
-            avatarContainer = itemView.findViewById(R.id.avatarContainer);
-            // Assuming item_chat_list root is the view used for layout changes
-            itemLayout = (LinearLayout) itemView;
         }
 
         public void hideItem() {
@@ -136,43 +87,33 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ViewHo
 
         public void showItem() {
             itemView.setVisibility(View.VISIBLE);
-            itemView.setLayoutParams(new RecyclerView.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT));
+            itemView.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
 
-        public void bind(final Student otherUser, final Chat chat,
-                         final OnChatSelectedListener listener, final String otherUserId, final String currentUserId) {
-
-            // CRITICAL CHECK: Already done in onBindViewHolder, but kept for method safety
-            if (otherUser == null) return;
-
-            textNickname.setText(otherUser.getNickname() != null ? otherUser.getNickname() : "Unknown User");
+        public void bind(final Student otherUser, final Chat chat, final OnChatSelectedListener listener, final String otherUserId, final String currentUserId) {
+            textNickname.setText(otherUser.getNickname() != null ? otherUser.getNickname() : "Unknown");
             textAvatar.setText(otherUser.getAvatar() != null ? otherUser.getAvatar() : "?");
-            textLastMessage.setText(chat.getLastMessage() != null ? chat.getLastMessage() : "");
+            textLastMessage.setText(chat.getLastMessage());
 
             if (chat.getTimestamp() > 0) {
                 SimpleDateFormat formatter = new SimpleDateFormat("h:mm a", Locale.getDefault());
                 textTime.setText(formatter.format(new Date(chat.getTimestamp())));
-            } else {
-                textTime.setText("");
             }
 
-            // Bold Unread Messages
-            if (chat.getLastSenderId() != null && !chat.getLastSenderId().equals(currentUserId) && !chat.isRead()) {
-                // UNREAD: Make text bold and change color
+            boolean isNewMessage = chat.getLastSenderId() != null
+                    && !chat.getLastSenderId().equals(currentUserId)
+                    && !chat.isRead();
+
+            if (isNewMessage) {
                 textNickname.setTypeface(null, Typeface.BOLD);
                 textLastMessage.setTypeface(null, Typeface.BOLD);
                 textTime.setTypeface(null, Typeface.BOLD);
-                // NOTE: Assumes R.color.text_primary/deep_purple exist
                 textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_primary));
                 textTime.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.deep_purple));
             } else {
-                // READ: Make text normal and gray
                 textNickname.setTypeface(null, Typeface.NORMAL);
                 textLastMessage.setTypeface(null, Typeface.NORMAL);
                 textTime.setTypeface(null, Typeface.NORMAL);
-                // NOTE: Assumes R.color.text_secondary exists
                 textLastMessage.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
                 textTime.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
             }

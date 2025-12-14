@@ -3,6 +3,7 @@ package com.tcwhu.app;
 import com.google.firebase.firestore.Exclude;
 import com.google.firebase.firestore.PropertyName;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Student implements Serializable {
@@ -27,11 +28,12 @@ public class Student implements Serializable {
     private Boolean isDeletionRequested;
     private Integer warningCount;
 
-    private String role; // <-- ADDED
+    private String role;
 
-    public Student() {}
+    public Student() {
+        this.blockedUsers = new ArrayList<>();
+    }
 
-    // --- Getters ---
     @Exclude
     public String getUserId() { return userId; }
     public String getStudentNumber() { return studentNumber; }
@@ -48,26 +50,17 @@ public class Student implements Serializable {
     public long getDeletionDate() { return deletionDate; }
     public String getDeletionReason() { return deletionReason; }
     public Integer getWarningCount() { return warningCount != null ? warningCount : 0; }
-    public String getRole() { return role; } // <-- ADDED
+    public String getRole() { return role; }
 
     @PropertyName("isVerified")
-    public boolean isVerified() {
-        return isVerified != null && isVerified;
-    }
+    public boolean isVerified() { return isVerified != null && isVerified; }
     @PropertyName("isBanned")
-    public boolean isBanned() {
-        return isBanned != null && isBanned;
-    }
+    public boolean isBanned() { return isBanned != null && isBanned; }
     @PropertyName("isSuspended")
-    public boolean isSuspended() {
-        return isSuspended != null && isSuspended;
-    }
+    public boolean isSuspended() { return isSuspended != null && isSuspended; }
     @PropertyName("isDeletionRequested")
-    public boolean isDeletionRequested() {
-        return isDeletionRequested != null && isDeletionRequested;
-    }
+    public boolean isDeletionRequested() { return isDeletionRequested != null && isDeletionRequested; }
 
-    // --- Setters ---
     public void setUserId(String userId) { this.userId = userId; }
     public void setStudentNumber(String studentNumber) { this.studentNumber = studentNumber; }
     public void setNickname(String nickname) { this.nickname = nickname; }
@@ -83,7 +76,7 @@ public class Student implements Serializable {
     public void setDeletionDate(long deletionDate) { this.deletionDate = deletionDate; }
     public void setDeletionReason(String deletionReason) { this.deletionReason = deletionReason; }
     public void setWarningCount(Integer warningCount) { this.warningCount = warningCount; }
-    public void setRole(String role) { this.role = role; } // <-- ADDM
+    public void setRole(String role) { this.role = role; }
 
     @PropertyName("isVerified")
     public void setVerified(boolean verified) { isVerified = verified; }

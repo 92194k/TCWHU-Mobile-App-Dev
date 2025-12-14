@@ -1,7 +1,6 @@
 package com.tcwhu.app;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -22,9 +21,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,7 +42,7 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
     private String currentFilterYear = "all";
     private String currentSearchQuery = "";
     private String currentUserId;
-
+    private static final String ADMIN_ROLE_TO_HIDE = "Super Admin";
     private List<String> blockedUsersList = new ArrayList<>();
 
     @Override
@@ -84,10 +81,7 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
     }
 
     private void setupRecyclerView() {
-        if (recyclerView == null) {
-            Log.e("FindSomeoneFragment", "RecyclerView not found!");
-            return;
-        }
+        if (recyclerView == null) return;
         adapter = new StudentFinderAdapter(filteredStudentList, this);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         recyclerView.setAdapter(adapter);
@@ -118,17 +112,14 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
             chipGroup.addView(chip);
         }
 
-        if (chipGroup.getChildCount() > 0) {
-            ((Chip) chipGroup.getChildAt(0)).setChecked(true);
-        }
+        if (chipGroup.getChildCount() > 0) ((Chip) chipGroup.getChildAt(0)).setChecked(true);
 
         chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (checkedIds.isEmpty()) {
                 ((Chip) group.getChildAt(0)).setChecked(true);
                 currentFilterYear = "all";
             } else {
-                int checkedId = checkedIds.get(0);
-                Chip selectedChip = group.findViewById(checkedId);
+                Chip selectedChip = group.findViewById(checkedIds.get(0));
                 currentFilterYear = (String) selectedChip.getTag();
             }
             applyFilters();
@@ -150,9 +141,7 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
                     }
                     loadAllVerifiedStudents();
                 })
-                .addOnFailureListener(e -> {
-                    loadAllVerifiedStudents();
-                });
+                .addOnFailureListener(e -> loadAllVerifiedStudents());
     }
 
     private void loadAllVerifiedStudents() {
@@ -168,7 +157,7 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
                             Student student = document.toObject(Student.class);
                             student.setUserId(document.getId());
 
-                            if ("admin".equals(student.getRole())) {
+                            if (student.getRole() != null && student.getRole().equalsIgnoreCase(ADMIN_ROLE_TO_HIDE)) {
                                 continue;
                             }
 
@@ -179,8 +168,6 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
                             }
                         }
                         applyFilters();
-                    } else {
-                        Toast.makeText(getContext(), "Error loading students.", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -213,11 +200,7 @@ public class FindSomeoneFragment extends Fragment implements StudentFinderAdapte
 
     @Override
     public void onChatStart(Student student) {
-        if (getActivity() == null || student == null || student.getUserId() == null) {
-            Toast.makeText(getContext(), "Error: Cannot start chat.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
+        if (getActivity() == null || student == null || student.getUserId() == null) return;
         Intent intent = new Intent(getActivity(), ChatWindowActivity.class);
         intent.putExtra(ChatWindowActivity.EXTRA_OTHER_USER_ID, student.getUserId());
         startActivity(intent);

@@ -31,7 +31,6 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
     private CardView previewCard;
     private TextView previewAvatarText;
     private Button buttonConfirm;
-
     private boolean isFromProfile = false;
 
     @Override
@@ -41,7 +40,6 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
 
         db = FirebaseFirestore.getInstance();
         userId = getIntent().getStringExtra("userId");
-
         isFromProfile = getIntent().getBooleanExtra("fromProfile", false);
 
         if (userId == null || userId.isEmpty()) {
@@ -50,35 +48,42 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
             return;
         }
 
+        initViews();
+        setupAvatarData();
+        setupCategoryChips(findViewById(R.id.categoryChipGroup));
+        setupRecyclerView(findViewById(R.id.avatarRecyclerView));
+
+        // Default category
+        updateAvatarGrid("Smileys & Emotion");
+
+        buttonConfirm.setOnClickListener(v -> handleConfirmation());
+    }
+
+    private void initViews() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+
         previewCard = findViewById(R.id.previewCard);
         previewAvatarText = findViewById(R.id.previewAvatarText);
-        ChipGroup categoryChipGroup = findViewById(R.id.categoryChipGroup);
-        RecyclerView avatarRecyclerView = findViewById(R.id.avatarRecyclerView);
         buttonConfirm = findViewById(R.id.buttonConfirm);
+    }
 
-        setupToolbar(toolbar);
-        setupAvatarData();
-        setupCategoryChips(categoryChipGroup);
-        setupRecyclerView(avatarRecyclerView);
-        updateAvatarGrid("Smileys & Emotion", categoryChipGroup);
+    private void handleConfirmation() {
+        if (selectedAvatar == null) {
+            Toast.makeText(this, "Please select an avatar first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        buttonConfirm.setOnClickListener(v -> {
-            if (selectedAvatar != null) {
-                if (isFromProfile) {
-                    // Avatar Result
-                    Intent resultIntent = new Intent();
-                    resultIntent.putExtra("selectedAvatar", selectedAvatar);
-                    setResult(RESULT_OK, resultIntent);
-                    finish();
-                } else {
-                    // Sign-up flow
-                    saveAvatarToFirestoreAndProceed(selectedAvatar);
-                }
-            } else {
-                Toast.makeText(this, "Please select an avatar first.", Toast.LENGTH_SHORT).show();
-            }
-        });
+        if (isFromProfile) {
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra("selectedAvatar", selectedAvatar);
+            setResult(RESULT_OK, resultIntent);
+            finish();
+        } else {
+            saveAvatarToFirestoreAndProceed(selectedAvatar);
+        }
     }
 
     private void saveAvatarToFirestoreAndProceed(String avatar) {
@@ -87,49 +92,29 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
 
         db.collection("users").document(userId).update(avatarUpdate)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(AvatarSelectorActivity.this, "Registration complete.", Toast.LENGTH_SHORT).show();
-
-                    Intent intent = new Intent(AvatarSelectorActivity.this, PendingVerificationActivity.class);
+                    Toast.makeText(this, "Registration complete.", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(this, PendingVerificationActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
                     finish();
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to save avatar and complete signup.", Toast.LENGTH_LONG).show()
-                );
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to save avatar.", Toast.LENGTH_LONG).show());
     }
 
     @Override
     public void onAvatarClick(String avatar) {
         selectedAvatar = avatar;
 
-        int position = -1;
+        // Highlight selection
         if (avatarAdapter != null && avatarAdapter.getAvatarList() != null) {
-            List<String> currentList = avatarAdapter.getAvatarList();
-            for (int i = 0; i < currentList.size(); i++) {
-                if (currentList.get(i).equals(avatar)) {
-                    position = i;
-                    break;
-                }
-            }
-        }
-
-        if (position != -1) {
-            avatarAdapter.setSelectedPosition(position);
+            int position = avatarAdapter.getAvatarList().indexOf(avatar);
+            if (position != -1) avatarAdapter.setSelectedPosition(position);
         }
 
         previewCard.setVisibility(View.VISIBLE);
         previewAvatarText.setText(avatar);
         buttonConfirm.setEnabled(true);
         buttonConfirm.setText(isFromProfile ? "Save Avatar" : "Confirm Selection");
-    }
-
-    private void setupToolbar(MaterialToolbar toolbar) {
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        }
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
     }
 
     private void setupRecyclerView(RecyclerView recyclerView) {
@@ -143,12 +128,12 @@ public class AvatarSelectorActivity extends AppCompatActivity implements AvatarA
             Chip chip = new Chip(this);
             chip.setText(category);
             chip.setCheckable(true);
-            chip.setOnClickListener(v -> updateAvatarGrid(category, chipGroup));
+            chip.setOnClickListener(v -> updateAvatarGrid(category));
             chipGroup.addView(chip);
         }
     }
 
-    private void updateAvatarGrid(String category, ChipGroup chipGroup) {
+    private void updateAvatarGrid(String category) {
         List<String> avatars = avatarMap.get(category);
         if (avatarAdapter != null && avatars != null) {
             avatarAdapter.updateAvatars(avatars);

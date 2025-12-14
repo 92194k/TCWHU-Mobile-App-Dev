@@ -1,10 +1,16 @@
 package com.tcwhu.app;
 
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -18,34 +24,31 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
+import android.os.Build;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-
+import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.List;
-import android.util.Log;
 import android.widget.Toast;
 
-
-
-// NOTE: Placeholder classes (Message, ChatDataManager, ChatActionHandler, etc.) are assumed to exist.
+interface DownloadRequestListener {
+    void onFileDownloadRequested(String fileUrl, String fileName, String mimeType);
+}
 
 public class ChatWindowActivity extends AppCompatActivity
-        implements ChatWindowCallbacks, ChatFileUploader.FileUploadCompletionListener {
+        implements ChatWindowCallbacks, ChatFileUploader.FileUploadCompletionListener, DownloadRequestListener {
 
     public static final String EXTRA_OTHER_USER_ID = "otherUserId";
 
-    // --- UI Components ---
     private RecyclerView messagesRecyclerView;
     private MessagesAdapter messagesAdapter;
     private List<Message> messageList;
@@ -54,84 +57,113 @@ public class ChatWindowActivity extends AppCompatActivity
     private ImageButton buttonSend, buttonPaperclip, buttonMic;
     private TextView textChatUsername, textChatYear, textChattingWithBanner;
     private ProgressBar chatProgressBar;
-    private LinearLayout inputContainer;
-    private LinearLayout adminWarningActions;
+    private LinearLayout inputContainer, adminWarningActions;
     private Button buttonConfirmWarning, buttonAppealWarning;
 
-    // NEW: Voice Message UI Elements
-    private TextView voiceTimerTextView;
+    private TextView voiceTimerTextView, slideToCancelText;
     private LinearLayout voiceRecordingOverlay;
-    private TextView slideToCancelText;
 
-    // --- Data and Logic Components ---
-    private String currentUserId;
-    private String otherUserId;
-    private String chatId;
+    private String currentUserId, otherUserId, chatId;
     private boolean isChatWithAdmin = false;
     private boolean amIStudent = true;
+
+    private String otherUserRole = null;
+    private FirebaseFirestore db;
+    private static final String ADMIN_ROLE = "Super Admin";
 
     private ChatDataManager dataManager;
     private ChatFileUploader fileUploader;
     private ChatActionHandler actionHandler;
-
     private VoiceMessageController voiceMessageController;
-    // NOTE: RECORD_AUDIO is the only required permission here. WRITE_EXTERNAL_STORAGE is deprecated.
     private static final int RECORD_PERMISSION_CODE = 101;
 
+    private String pendingDownloadUrl, pendingDownloadName, pendingDownloadMimeType;
     private ActivityResultLauncher<Intent> filePickerLauncher;
+    private ActivityResultLauncher<String> requestDownloadPermissionLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        db = FirebaseFirestore.getInstance();
 
         initializeUserAndChatIds();
         if (currentUserId == null || otherUserId == null) {
-            Toast.makeText(this, "Error: User or partner ID missing. Exiting.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Error: User or partner ID missing.", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
 
         setContentView(R.layout.activity_chat_window);
-
         initUI();
 
         messageList = new ArrayList<>();
-
         dataManager = new ChatDataManager(currentUserId, otherUserId, chatId, messageList, this);
-        actionHandler = new ChatActionHandler(this, currentUserId, otherUserId, chatId, dataManager, this);
         fileUploader = new ChatFileUploader(this, chatId, this, this);
-
-        messagesAdapter = new MessagesAdapter(messageList, currentUserId, actionHandler);
+        actionHandler = new ChatActionHandler(this, currentUserId, otherUserId, chatId, dataManager, this, fileUploader);
+        messagesAdapter = new MessagesAdapter(messageList, currentUserId, actionHandler, this);
 
         setupRecyclerView();
+        loadOtherUserProfile();
 
-
-        dataManager.loadChatPartnerDetails();
         dataManager.markChatAsRead();
         dataManager.setupAdminWarningUI(isChatWithAdmin, amIStudent);
 
         setupFilePickerLauncher();
         setupActionListeners();
+        setupPermissionLaunchers();
 
-        voiceMessageController = new VoiceMessageController(
-                this,
-                fileUploader,
-                buttonMic,
-                voiceTimerTextView,
-                voiceRecordingOverlay,
-                inputContainer,
-                slideToCancelText
-        );
+        voiceMessageController = new VoiceMessageController(this, fileUploader, buttonMic, voiceTimerTextView, voiceRecordingOverlay, inputContainer, slideToCancelText);
+
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(onDownloadComplete, filter, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(onDownloadComplete, filter);
+        }
     }
+
+    private void loadOtherUserProfile() {
+        if (otherUserId == null) return;
+        db.collection("users").document(otherUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Student otherUser = documentSnapshot.toObject(Student.class);
+                        if (otherUser != null) otherUserRole = otherUser.getRole();
+                    }
+                    supportInvalidateOptionsMenu();
+                    dataManager.loadChatPartnerDetails();
+                })
+                .addOnFailureListener(e -> dataManager.loadChatPartnerDetails());
+    }
+
+    private void setupPermissionLaunchers() {
+        requestDownloadPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (isGranted) initiateDownload(pendingDownloadUrl, pendingDownloadName, pendingDownloadMimeType);
+            else showToast("Permission denied. Cannot save file.", Toast.LENGTH_LONG);
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (dataManager != null) dataManager.cleanupListener();
+        if (messagesAdapter != null) messagesAdapter.cleanup();
+        if (voiceMessageController != null) voiceMessageController.cleanup();
+        try { unregisterReceiver(onDownloadComplete); } catch (Exception ignored) {}
+    }
+
+    private final BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            showToast("Download completed.", Toast.LENGTH_SHORT);
+        }
+    };
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (dataManager != null) {
-            dataManager.listenForMessages();
-        }
+        if (dataManager != null) dataManager.listenForMessages();
     }
-
 
     private void initializeUserAndChatIds() {
         String adminIdFromIntent = getIntent().getStringExtra("ADMIN_USER_ID");
@@ -144,10 +176,7 @@ public class ChatWindowActivity extends AppCompatActivity
             otherUserId = getIntent().getStringExtra(EXTRA_OTHER_USER_ID);
         } else {
             amIStudent = true;
-            if (currentUser == null) {
-                return;
-            }
-            currentUserId = currentUser.getUid();
+            if (currentUser != null) currentUserId = currentUser.getUid();
             otherUserId = getIntent().getStringExtra(EXTRA_OTHER_USER_ID);
         }
 
@@ -181,7 +210,6 @@ public class ChatWindowActivity extends AppCompatActivity
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setDisplayShowTitleEnabled(false);
@@ -189,16 +217,13 @@ public class ChatWindowActivity extends AppCompatActivity
         toolbar.setNavigationOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
 
         String warningTemplate = getIntent().getStringExtra("WARNING_TEMPLATE");
-        if (warningTemplate != null && !warningTemplate.isEmpty()) {
-            inputMessage.setText(warningTemplate);
-        }
+        if (warningTemplate != null && !warningTemplate.isEmpty()) inputMessage.setText(warningTemplate);
     }
 
     private void setupRecyclerView() {
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         layoutManager.setStackFromEnd(true);
         messagesRecyclerView.setLayoutManager(layoutManager);
-        messagesAdapter = new MessagesAdapter(messageList, currentUserId, actionHandler);
         messagesRecyclerView.setAdapter(messagesAdapter);
     }
 
@@ -208,36 +233,25 @@ public class ChatWindowActivity extends AppCompatActivity
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                         Uri selectedFileUri = result.getData().getData();
-                        if (selectedFileUri != null) {
-                            fileUploader.handleFilePickerResult(selectedFileUri);
-                        }
+                        if (selectedFileUri != null) fileUploader.handleFilePickerResult(selectedFileUri);
                     }
                 }
         );
     }
 
-
     private void setupActionListeners() {
         buttonSend.setOnClickListener(v -> {
             String text = inputMessage.getText().toString().trim();
             if (TextUtils.isEmpty(text)) return;
-
             dataManager.sendMessage("text", text, null, 0);
-
             inputMessage.setText("");
         });
 
-        buttonPaperclip.setOnClickListener(v ->
-                fileUploader.openFilePicker(filePickerLauncher)
-        );
+        buttonPaperclip.setOnClickListener(v -> fileUploader.openFilePicker(filePickerLauncher));
 
-        // DELEGATE: Voice Recording Listener is delegated to the controller
         buttonMic.setOnTouchListener((v, event) -> {
-            // Check permission, request if needed, then allow the controller to handle the touch event
-            if (checkRecordingPermissions()) {
-                if (voiceMessageController != null) {
-                    return voiceMessageController.onTouch(v, event);
-                }
+            if (checkRecordingPermissions() && voiceMessageController != null) {
+                return voiceMessageController.onTouch(v, event);
             }
             return false;
         });
@@ -250,9 +264,7 @@ public class ChatWindowActivity extends AppCompatActivity
         buttonAppealWarning.setOnClickListener(v -> actionHandler.showAppealDialog(adminWarningActions));
     }
 
-    // --- Voice Recording Logic (CRITICAL: Single Permission Check) ---
     private boolean checkRecordingPermissions() {
-        // Only need RECORD_AUDIO permission for modern Android versions and internal storage
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, RECORD_PERMISSION_CODE);
             return false;
@@ -264,21 +276,19 @@ public class ChatWindowActivity extends AppCompatActivity
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == RECORD_PERMISSION_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            // Permission granted, re-simulate the touch event to start recording immediately
-            // NOTE: This re-simulation is often complex and error-prone; a better approach is to
-            // inform the user to tap the mic button again, but we attempt the easy fix here.
-            Snackbar.make(findViewById(android.R.id.content), "Permission granted. Tap mic again.", Snackbar.LENGTH_SHORT).show();
-            // Since we can't reliably re-simulate the touch from here, we rely on the user tapping again.
+            Snackbar.make(findViewById(android.R.id.content), "Permission granted.", Snackbar.LENGTH_SHORT).show();
         } else {
-            Snackbar.make(findViewById(android.R.id.content), "Microphone permission denied. Cannot record voice.", Snackbar.LENGTH_LONG).show();
+            Snackbar.make(findViewById(android.R.id.content), "Permission denied.", Snackbar.LENGTH_LONG).show();
         }
     }
 
-    // --- Lifecycle and Menu (Delegation) ---
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        if (!isChatWithAdmin) {
+        if (!amIStudent) {
+            getMenuInflater().inflate(R.menu.menu_chat_options, menu);
+            return true;
+        }
+        if (otherUserRole == null || !otherUserRole.equals(ADMIN_ROLE)) {
             getMenuInflater().inflate(R.menu.menu_chat_options, menu);
         }
         return true;
@@ -288,42 +298,25 @@ public class ChatWindowActivity extends AppCompatActivity
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
 
+        if (amIStudent && otherUserRole != null && otherUserRole.equals(ADMIN_ROLE)) return false;
+
         if (id == R.id.menu_delete_conversation) {
             actionHandler.showDeleteDialog();
             return true;
+        } else if (id == R.id.menu_report_user) {
+            actionHandler.showReportDialog();
+            return true;
+        } else if (id == R.id.menu_block_user) {
+            actionHandler.showBlockDialog();
+            return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (dataManager != null) {
-            dataManager.cleanupListener();
-        }
-        if (messagesAdapter != null) {
-            messagesAdapter.cleanup();
-        }
-        if (voiceMessageController != null) {
-            voiceMessageController.cleanup();
-        }
-    }
-
-    // --- ChatWindowCallbacks Implementation (Activity updates UI) ---
-
-    @Override
     public void onMessageListUpdated(List<Message> newMessages, boolean shouldScrollToBottom) {
         messagesAdapter.notifyDataSetChanged();
-
-        boolean atBottom = !messagesRecyclerView.canScrollVertically(1);
-
-        if (shouldScrollToBottom || atBottom && newMessages.size() > 0) {
+        if (shouldScrollToBottom && newMessages.size() > 0) {
             messagesRecyclerView.scrollToPosition(newMessages.size() - 1);
         }
     }
@@ -331,14 +324,12 @@ public class ChatWindowActivity extends AppCompatActivity
     @Override
     public void onChatPartnerDetailsLoaded(String nickname, String yearLevel, String role) {
         textChatUsername.setText(nickname != null ? nickname : "Unknown");
-
         if (yearLevel != null && !"admin".equals(role)) {
             textChatYear.setText(yearLevel);
             textChatYear.setVisibility(View.VISIBLE);
         } else {
             textChatYear.setVisibility(View.GONE);
         }
-
         textChattingWithBanner.setText("You are chatting with " + (nickname != null ? nickname : "Unknown"));
     }
 
@@ -370,5 +361,55 @@ public class ChatWindowActivity extends AppCompatActivity
     @Override
     public void onFileUploadCompleted(String type, String content, String fileName, long durationMillis) {
         dataManager.sendMessage(type, content, fileName, durationMillis);
+    }
+
+    @Override
+    public void onFileDownloadRequested(String fileUrl, String fileName, String mimeType) {
+        if (fileUrl == null || fileUrl.isEmpty()) {
+            showToast("Error: File link is broken.", Toast.LENGTH_SHORT);
+            return;
+        }
+
+        if (fileName == null || fileName.isEmpty()) fileName = "TCWHU_File_" + System.currentTimeMillis();
+
+        pendingDownloadUrl = fileUrl;
+        pendingDownloadName = fileName;
+        pendingDownloadMimeType = mimeType;
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestDownloadPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+                return;
+            }
+        }
+
+        initiateDownload(fileUrl, fileName, mimeType);
+    }
+
+    private void initiateDownload(String fileUrl, String fileName, String mimeType) {
+        try {
+            DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            Uri uri = Uri.parse(fileUrl);
+            DownloadManager.Request request = new DownloadManager.Request(uri);
+
+            request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
+            request.setAllowedOverMetered(true);
+            request.setAllowedOverRoaming(true);
+
+            String cleanFileName = fileName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            if (!cleanFileName.contains(".")) cleanFileName += ".bin";
+
+            request.setTitle(cleanFileName);
+            request.setDescription("Downloading file...");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, cleanFileName);
+
+            downloadManager.enqueue(request);
+            showToast("Downloading " + cleanFileName + "...", Toast.LENGTH_SHORT);
+
+        } catch (Exception e) {
+            Log.e("Downloader", "Download failed: " + e.getMessage());
+            showToast("Download failed.", Toast.LENGTH_LONG);
+        }
     }
 }

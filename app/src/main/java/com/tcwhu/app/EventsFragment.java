@@ -36,12 +36,9 @@ public class EventsFragment extends Fragment implements EventsAdapter.OnEventCli
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_events, container, false);
-
         eventsRecyclerView = view.findViewById(R.id.eventsRecyclerView);
         emptyView = view.findViewById(R.id.emptyView);
-
         setupRecyclerView();
-
         return view;
     }
 
@@ -75,7 +72,7 @@ public class EventsFragment extends Fragment implements EventsAdapter.OnEventCli
                         eventsAdapter.notifyDataSetChanged();
                         checkIfEmpty();
                     } else {
-                        Toast.makeText(getContext(), "Error loading events. Check Firestore Index.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getContext(), "Error loading events.", Toast.LENGTH_LONG).show();
                     }
                 });
     }
@@ -83,13 +80,9 @@ public class EventsFragment extends Fragment implements EventsAdapter.OnEventCli
     private void checkIfEmpty() {
         if (eventsRecyclerView == null || emptyView == null || getContext() == null) return;
 
-        if (eventList.isEmpty()) {
-            eventsRecyclerView.setVisibility(View.GONE);
-            emptyView.setVisibility(View.VISIBLE);
-        } else {
-            eventsRecyclerView.setVisibility(View.VISIBLE);
-            emptyView.setVisibility(View.GONE);
-        }
+        boolean isEmpty = eventList.isEmpty();
+        eventsRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+        emptyView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
     }
 
     @Override

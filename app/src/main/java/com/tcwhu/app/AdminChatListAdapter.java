@@ -5,11 +5,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -43,9 +41,8 @@ public class AdminChatListAdapter extends RecyclerView.Adapter<AdminChatListAdap
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Chat chat = chatList.get(position);
-
-        // Get the student's ID
         String studentId = null;
+
         if (chat.getUsers() != null) {
             for (String id : chat.getUsers()) {
                 if (!id.equals(adminId)) {
@@ -56,13 +53,17 @@ public class AdminChatListAdapter extends RecyclerView.Adapter<AdminChatListAdap
         }
 
         Student student = studentMap.get(studentId);
-        holder.bind(chat, student, listener, adminId);
+
+        if (student != null) {
+            holder.showItem();
+            holder.bind(chat, student, listener, adminId);
+        } else {
+            holder.hideItem();
+        }
     }
 
     @Override
-    public int getItemCount() {
-        return chatList.size();
-    }
+    public int getItemCount() { return chatList.size(); }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView textAvatar, textNickname, textLastMessage, textTime;
@@ -75,15 +76,19 @@ public class AdminChatListAdapter extends RecyclerView.Adapter<AdminChatListAdap
             textTime = itemView.findViewById(R.id.textTime);
         }
 
-        public void bind(final Chat chat, final Student student, final OnChatClickListener listener, String adminId) {
-            if (student != null) {
-                textAvatar.setText(student.getAvatar() != null ? student.getAvatar() : "?");
-                textNickname.setText(student.getNickname() != null ? student.getNickname() : "Unknown User");
-            } else {
-                textAvatar.setText("?");
-                textNickname.setText("Deleted User");
-            }
+        public void hideItem() {
+            itemView.setVisibility(View.GONE);
+            itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
+        }
 
+        public void showItem() {
+            itemView.setVisibility(View.VISIBLE);
+            itemView.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+
+        public void bind(final Chat chat, final Student student, final OnChatClickListener listener, String adminId) {
+            textAvatar.setText(student.getAvatar() != null ? student.getAvatar() : "?");
+            textNickname.setText(student.getNickname() != null ? student.getNickname() : "Unknown User");
             textLastMessage.setText(chat.getLastMessage());
 
             if (chat.getTimestamp() > 0) {
@@ -93,7 +98,6 @@ public class AdminChatListAdapter extends RecyclerView.Adapter<AdminChatListAdap
                 textTime.setText("");
             }
 
-            // Unread (naka bold), Read (dili naka bold)
             boolean isUnread = chat.getLastSenderId() != null
                     && !chat.getLastSenderId().equals(adminId)
                     && !chat.isRead();

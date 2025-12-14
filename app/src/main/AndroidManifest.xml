@@ -1,49 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.tcwhu.app">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <application
         android:name=".TCWHUApplication"
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
+        android:theme="@style/AppTheme"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:requestLegacyExternalStorage="true"
+        android:usesCleartextTraffic="true">
 
-        <activity android:name=".FullScreenImageActivity"
+        <service
+            android:name=".MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".LandingActivity" android:exported="false" />
+        <activity android:name=".StudentLoginActivity" android:exported="false" />
+        <activity android:name=".StudentSignUpActivity" android:exported="false" />
+        <activity android:name=".AdminLoginActivity" android:exported="false" />
+        <activity android:name=".PrivacyPolicyActivity" android:exported="true" android:label="@string/title_activity_privacy_policy" />
+
+        <activity android:name=".StudentHomeActivity" android:exported="false" />
+        <activity android:name=".StudentVerificationActivity" android:exported="false" />
+        <activity android:name=".PendingVerificationActivity" android:exported="false" />
+        <activity android:name=".AvatarSelectorActivity" android:exported="false" />
+
+        <activity android:name=".AdminDashboardActivity" android:exported="false" />
+        <activity android:name=".AdminSettingsActivity" android:exported="false" />
+        <activity android:name=".UserOverviewActivity" android:exported="false" />
+        <activity android:name=".ReportsManagementActivity" android:exported="false" />
+        <activity android:name=".EventsManagementActivity" android:exported="false" />
+        <activity android:name=".ActivityLogsActivity" android:exported="false" />
+        <activity android:name=".ActivityLogDetailActivity" android:exported="false" android:theme="@style/AppTheme" />
+        <activity android:name=".AdminChatListActivity" android:exported="false" />
+
+        <activity
+            android:name=".AccountSuspendedActivity"
             android:theme="@style/Theme.AppCompat.NoActionBar"
-            android:screenOrientation="portrait"/>
-        <activity
-            android:name=".AdminChatListActivity"
-            android:exported="false" />
-        <activity
-            android:name=".EventDetailActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme" />
-        <activity
-            android:name="com.canhub.cropper.CropImageActivity"
-            android:theme="@style/AppTheme.ImageCropper" />
-        <activity android:name=".PrivacyPolicyActivity"
-            android:exported="true"
-            android:label="@string/title_activity_privacy_policy" />
-        <activity
-            android:name=".ActivityLogDetailActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme" />
-        <activity
-            android:name=".ViewPhotoActivity"
-            android:exported="false" />
-        <activity
-            android:name=".PhotoUploadActivity"
             android:exported="false" />
         <activity
             android:name=".ChatWindowActivity"
@@ -52,58 +76,16 @@
             android:theme="@style/AppTheme" />
 
         <activity
-            android:name=".AdminSettingsActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ActivityLogsActivity"
-            android:exported="false" />
-        <activity
-            android:name=".UserOverviewActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ReportsManagementActivity"
-            android:exported="false" />
-        <activity
-            android:name=".EventsManagementActivity"
-            android:exported="false" />
-        <activity
-            android:name=".StudentVerificationActivity"
-            android:exported="false" />
-        <activity
-            android:name=".AdminDashboardActivity"
-            android:exported="false" />
+            android:name=".FullScreenImageActivity"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:screenOrientation="portrait"/>
 
-        <activity
-            android:name=".AdminLoginActivity"
-            android:exported="false" />
+        <activity android:name=".ViewPhotoActivity" android:exported="false" />
+        <activity android:name=".PhotoUploadActivity" android:exported="false" />
+        <activity android:name=".EventDetailActivity" android:exported="false" android:theme="@style/AppTheme" />
 
-        <activity
-            android:name=".StudentHomeActivity"
-            android:exported="false" />
-        <activity
-            android:name=".PendingVerificationActivity"
-            android:exported="false" />
-        <activity
-            android:name=".AvatarSelectorActivity"
-            android:exported="false" />
-        <activity
-            android:name=".StudentSignUpActivity"
-            android:exported="false" />
-        <activity
-            android:name=".StudentLoginActivity"
-            android:exported="false" />
-        <activity
-            android:name=".LandingActivity"
-            android:exported="false" />
-        <activity
-            android:name=".SplashActivity"
-            android:exported="true">
+        <activity android:name="com.canhub.cropper.CropImageActivity" android:theme="@style/AppTheme.ImageCropper" />
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
     </application>
 
 </manifest>

@@ -17,14 +17,26 @@ public class EventDetailActivity extends AppCompatActivity {
 
     private ImageView detailEventImage;
     private TextView detailEventTitle, detailEventDate, detailEventPostedBy, detailEventDescription;
-    private MaterialToolbar toolbar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_event_detail);
 
-        toolbar = findViewById(R.id.toolbar);
+        initViews();
+
+        Event event = (Event) getIntent().getSerializableExtra(EXTRA_EVENT);
+        if (event == null) {
+            Toast.makeText(this, "Error: Could not load event details.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        populateEventDetails(event);
+    }
+
+    private void initViews() {
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -37,16 +49,6 @@ public class EventDetailActivity extends AppCompatActivity {
         detailEventDate = findViewById(R.id.detailEventDate);
         detailEventPostedBy = findViewById(R.id.detailEventPostedBy);
         detailEventDescription = findViewById(R.id.detailEventDescription);
-
-        Event event = (Event) getIntent().getSerializableExtra(EXTRA_EVENT);
-
-        if (event == null) {
-            Toast.makeText(this, "Error: Could not load event details.", Toast.LENGTH_LONG).show();
-            finish();
-            return;
-        }
-
-        populateEventDetails(event);
     }
 
     private void populateEventDetails(Event event) {
@@ -54,12 +56,9 @@ public class EventDetailActivity extends AppCompatActivity {
         detailEventDescription.setText(event.getDescription());
         detailEventPostedBy.setText("Posted by " + event.getPostedBy());
 
-        // Format Date
         SimpleDateFormat formatter = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.US);
-        String formattedDate = formatter.format(new Date(event.getDate()));
-        detailEventDate.setText(formattedDate);
+        detailEventDate.setText(formatter.format(new Date(event.getDate())));
 
-        // Load Image
         if (event.getImageUrl() != null && !event.getImageUrl().isEmpty()) {
             Glide.with(this)
                     .load(event.getImageUrl())

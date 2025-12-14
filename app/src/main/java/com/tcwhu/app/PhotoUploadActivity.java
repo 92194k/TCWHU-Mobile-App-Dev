@@ -18,8 +18,6 @@ import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.firestore.FirebaseFirestore;
-import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 
 public class PhotoUploadActivity extends AppCompatActivity {
@@ -43,14 +41,7 @@ public class PhotoUploadActivity extends AppCompatActivity {
         userId = getIntent().getStringExtra("userId");
         userData = (Map<String, Object>) getIntent().getSerializableExtra("userData");
 
-        selfiePreview = findViewById(R.id.selfiePreview);
-        idPreview = findViewById(R.id.idPreview);
-        buttonUploadSelfie = findViewById(R.id.buttonUploadSelfie);
-        buttonUploadId = findViewById(R.id.buttonUploadId);
-        buttonFinish = findViewById(R.id.buttonFinish);
-        progressBar = findViewById(R.id.progressBar);
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        initViews();
 
         imagePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -58,16 +49,10 @@ public class PhotoUploadActivity extends AppCompatActivity {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                         Uri selectedImageUri = result.getData().getData();
                         if (isUploadingSelfie) {
-                            selfiePreview.setPadding(0, 0, 0, 0);
-                            selfiePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                            selfiePreview.setImageTintList(null);
-                            Glide.with(this).load(selectedImageUri).into(selfiePreview);
+                            configurePreview(selfiePreview, selectedImageUri);
                             uploadImageToCloudinary("selfie", selectedImageUri);
                         } else {
-                            idPreview.setPadding(0, 0, 0, 0);
-                            idPreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                            idPreview.setImageTintList(null);
-                            Glide.with(this).load(selectedImageUri).into(idPreview);
+                            configurePreview(idPreview, selectedImageUri);
                             uploadImageToCloudinary("id_photo", selectedImageUri);
                         }
                     }
@@ -91,6 +76,24 @@ public class PhotoUploadActivity extends AppCompatActivity {
         });
     }
 
+    private void initViews() {
+        selfiePreview = findViewById(R.id.selfiePreview);
+        idPreview = findViewById(R.id.idPreview);
+        buttonUploadSelfie = findViewById(R.id.buttonUploadSelfie);
+        buttonUploadId = findViewById(R.id.buttonUploadId);
+        buttonFinish = findViewById(R.id.buttonFinish);
+        progressBar = findViewById(R.id.progressBar);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+    }
+
+    private void configurePreview(ImageView preview, Uri uri) {
+        preview.setPadding(0, 0, 0, 0);
+        preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        preview.setImageTintList(null);
+        Glide.with(this).load(uri).into(preview);
+    }
+
     private void openImagePicker() {
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setType("image/*");
@@ -107,23 +110,22 @@ public class PhotoUploadActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(String requestId, Map resultData) {
                         String url = (String) resultData.get("secure_url");
-                        if ("selfie".equals(type)) {
-                            selfieImageUrl = url;
-                        } else {
-                            idImageUrl = url;
-                        }
+                        if ("selfie".equals(type)) selfieImageUrl = url;
+                        else idImageUrl = url;
+
                         checkIfBothUploaded();
                         progressBar.setVisibility(View.GONE);
-                        Toast.makeText(PhotoUploadActivity.this, type + " Photo uploaded!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(PhotoUploadActivity.this, type + " uploaded!", Toast.LENGTH_SHORT).show();
                     }
+
                     @Override
                     public void onError(String requestId, ErrorInfo error) {
-                        Toast.makeText(PhotoUploadActivity.this, "Upload failed: " + error.getDescription(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(PhotoUploadActivity.this, "Upload failed.", Toast.LENGTH_SHORT).show();
                         progressBar.setVisibility(View.GONE);
                     }
-                    @Override public void onStart(String requestId) {}
-                    @Override public void onProgress(String requestId, long bytes, long totalBytes) {}
-                    @Override public void onReschedule(String requestId, ErrorInfo error) {}
+                    @Override public void onStart(String r) {}
+                    @Override public void onProgress(String r, long b, long t) {}
+                    @Override public void onReschedule(String r, ErrorInfo e) {}
                 }).dispatch();
     }
 
@@ -134,18 +136,13 @@ public class PhotoUploadActivity extends AppCompatActivity {
     }
 
     private void saveUserProfileAndProceed() {
-        // Use .set() to CREATE the document for the first time.
         FirebaseFirestore.getInstance().collection("users").document(userId).set(userData)
                 .addOnSuccessListener(aVoid -> {
-                    // Navigate to the Avatar Selector screen
                     Intent intent = new Intent(this, AvatarSelectorActivity.class);
                     intent.putExtra("userId", userId);
                     startActivity(intent);
-                    finish(); // <-- CRITICAL FIX: Close this activity to maintain clean navigation
+                    finish();
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Failed to save profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    Log.e("PhotoUploadActivity", "Firestore save failed", e);
-                });
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to save profile.", Toast.LENGTH_LONG).show());
     }
 }

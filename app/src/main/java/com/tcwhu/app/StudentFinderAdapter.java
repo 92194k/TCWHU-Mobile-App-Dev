@@ -8,7 +8,6 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
@@ -19,7 +18,7 @@ public class StudentFinderAdapter extends RecyclerView.Adapter<StudentFinderAdap
 
     public interface OnChatStartListener {
         void onChatStart(Student student);
-        void onSkip(int position); // ADDED
+        void onSkip(int position);
     }
 
     private List<Student> studentList;
@@ -38,7 +37,7 @@ public class StudentFinderAdapter extends RecyclerView.Adapter<StudentFinderAdap
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(studentList.get(position), listener, position); // Pass position
+        holder.bind(studentList.get(position), listener, position);
     }
 
     @Override

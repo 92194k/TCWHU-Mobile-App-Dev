@@ -32,8 +32,6 @@ public class ReportsManagementActivity extends AppCompatActivity implements Repo
     private FirebaseFirestore db;
     private TextView emptyView;
 
-    // --- ADDED: The ID for your admin account ---
-    // !!! IMPORTANT: You must create this user in Firestore manually !!!
     public static final String ADMIN_USER_ID = "system_admin";
 
     @Override
@@ -47,7 +45,7 @@ public class ReportsManagementActivity extends AppCompatActivity implements Repo
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
         setupRecyclerView();
@@ -62,7 +60,7 @@ public class ReportsManagementActivity extends AppCompatActivity implements Repo
     private void setupRecyclerView() {
         reportList = new ArrayList<>();
         userNicknameMap = new HashMap<>();
-        adapter = new ReportsAdapter(reportList, userNicknameMap, this::onActionClick);
+        adapter = new ReportsAdapter(reportList, userNicknameMap, this);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
     }
@@ -97,12 +95,11 @@ public class ReportsManagementActivity extends AppCompatActivity implements Repo
                         adapter.notifyDataSetChanged();
                         checkIfEmpty();
                     } else {
-                        Toast.makeText(this, "Error loading reports. Check Firestore Rules and Index.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Error loading reports.", Toast.LENGTH_LONG).show();
                     }
                 });
     }
 
-    // --- UPDATED: This now correctly calls the right methods ---
     @Override
     public void onActionClick(Report report, String action) {
         String reportedUserId = report.getReportedUserId();
@@ -116,10 +113,10 @@ public class ReportsManagementActivity extends AppCompatActivity implements Repo
                 showWarningDialog(report);
                 break;
             case "suspend":
-                showConfirmationDialog("Suspend User", "Suspend this user for 30 days? This action cannot be undone.", report, action);
+                showConfirmationDialog("Suspend User", "Suspend this user for 30 days?", report, action);
                 break;
             case "ban":
-                showConfirmationDialog("Permanent Ban", "Permanently ban this user? This action cannot be undone.", report, action);
+                showConfirmationDialog("Permanent Ban", "Permanently ban this user?", report, action);
                 break;
         }
     }
@@ -131,15 +128,12 @@ public class ReportsManagementActivity extends AppCompatActivity implements Repo
 
         new AlertDialog.Builder(this)
                 .setTitle("Issue Warning")
-                .setMessage("This will send a warning to the user via chat and resolve the report.")
+                .setMessage("This will send a warning to the user via chat.")
                 .setView(inputReason)
                 .setPositiveButton("Send Warning", (dialog, which) -> {
                     String reason = inputReason.getText().toString().trim();
-                    if (!reason.isEmpty()) {
-                        executeAction(report, "warning", reason);
-                    } else {
-                        Toast.makeText(this, "A warning message is required.", Toast.LENGTH_SHORT).show();
-                    }
+                    if (!reason.isEmpty()) executeAction(report, "warning", reason);
+                    else Toast.makeText(this, "A warning message is required.", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -156,7 +150,6 @@ public class ReportsManagementActivity extends AppCompatActivity implements Repo
 
     private void executeAction(Report report, String action, String warningReason) {
         String reportedUserId = report.getReportedUserId();
-
         WriteBatch batch = db.batch();
         DocumentReference userRef = db.collection("users").document(reportedUserId);
         Map<String, Object> userUpdates = new HashMap<>();
@@ -165,21 +158,17 @@ public class ReportsManagementActivity extends AppCompatActivity implements Repo
             userUpdates.put("warningCount", FieldValue.increment(1));
             batch.update(userRef, userUpdates);
 
-            // --- CRITICAL FIX: Launch Chat with Template ---
             Intent intent = new Intent(this, ChatWindowActivity.class);
-            intent.putExtra("ADMIN_USER_ID", ADMIN_USER_ID); // Identifies Admin
-            intent.putExtra(ChatWindowActivity.EXTRA_OTHER_USER_ID, reportedUserId); // Identifies Student
-
-            String warningTemplate = "This is an official warning regarding a report filed against your account. \n\nReason: " + warningReason + "\n\nPlease review the community guidelines. Further violations may result in account suspension or a permanent ban.";
+            intent.putExtra("ADMIN_USER_ID", ADMIN_USER_ID);
+            intent.putExtra(ChatWindowActivity.EXTRA_OTHER_USER_ID, reportedUserId);
+            String warningTemplate = "Official Warning: " + warningReason + "\n\nPlease review our community guidelines.";
             intent.putExtra("WARNING_TEMPLATE", warningTemplate);
             startActivity(intent);
-            // --- END OF FIX ---
 
         } else if ("suspend".equals(action)) {
             long suspendMillis = TimeUnit.DAYS.toMillis(30);
-            long suspendEndDate = System.currentTimeMillis() + suspendMillis;
             userUpdates.put("isSuspended", true);
-            userUpdates.put("suspendEndDate", suspendEndDate);
+            userUpdates.put("suspendEndDate", System.currentTimeMillis() + suspendMillis);
             userUpdates.put("isBanned", false);
             batch.update(userRef, userUpdates);
 
@@ -191,15 +180,14 @@ public class ReportsManagementActivity extends AppCompatActivity implements Repo
 
         DocumentReference reportRef = db.collection("reports").document(report.getId());
         batch.update(reportRef, "status", "resolved_action_" + action);
+        batch.update(reportRef, "resolved", true);
 
         batch.commit()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Action taken. Report resolved.", Toast.LENGTH_SHORT).show();
-                    loadPendingReports(); // Refresh the list
+                    loadPendingReports();
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Failed to apply action: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+                .addOnFailureListener(e -> Toast.makeText(this, "Action failed.", Toast.LENGTH_SHORT).show());
     }
 
     private void checkIfEmpty() {

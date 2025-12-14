@@ -2,6 +2,7 @@ package com.tcwhu.app;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,7 +24,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import android.util.Log;
 
 public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSelectedListener {
 
@@ -37,23 +37,19 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
     private LinearLayout emptyView;
     private List<String> blockedUsersList = new ArrayList<>();
 
+    private static final String ADMIN_PLACEHOLDER_ID = "ADMIN_USER_ID_PLACEHOLDER";
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         db = FirebaseFirestore.getInstance();
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null) {
-            currentUserId = user.getUid();
-        } else {
-            // If user is null here, navigation should have failed earlier.
-            // We keep currentUserId null to prevent db calls.
-        }
+        if (user != null) currentUserId = user.getUid();
     }
 
     @Nullable @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_chat, container, false);
-        return view;
+        return inflater.inflate(R.layout.fragment_chat, container, false);
     }
 
     @Override
@@ -72,7 +68,6 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
         if (currentUserId != null) {
             loadCurrentUserProfile();
         } else if (getContext() != null) {
-            // Handle case where user is not logged in but somehow reached this fragment
             Toast.makeText(getContext(), "User not logged in.", Toast.LENGTH_LONG).show();
             checkIfEmpty();
         }
@@ -81,9 +76,7 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
     @Override
     public void onPause() {
         super.onPause();
-        if (chatListListener != null) {
-            chatListListener.remove();
-        }
+        if (chatListListener != null) chatListListener.remove();
     }
 
     private void setupRecyclerView() {
@@ -107,9 +100,7 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                     }
                     loadAllUsersAndListenForChats();
                 })
-                .addOnFailureListener(e -> {
-                    loadAllUsersAndListenForChats();
-                });
+                .addOnFailureListener(e -> loadAllUsersAndListenForChats());
     }
 
     private void loadAllUsersAndListenForChats() {
@@ -122,14 +113,6 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                         Student student = doc.toObject(Student.class);
                         studentMap.put(doc.getId(), student);
                     }
-
-                    Student adminUser = new Student();
-                    adminUser.setNickname("System Admin");
-                    adminUser.setAvatar("🛡️");
-                    adminUser.setRole("admin");
-                    // Assuming ReportsManagementActivity.ADMIN_USER_ID is a defined constant
-                    studentMap.put(ReportsManagementActivity.ADMIN_USER_ID, adminUser);
-
                     listenForChats();
                 })
                 .addOnFailureListener(e -> Toast.makeText(getContext(), "Error loading user data.", Toast.LENGTH_SHORT).show());
@@ -139,20 +122,15 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
         if (currentUserId == null) return;
 
         CollectionReference chatsRef = db.collection("chats");
-
         if (chatListListener != null) chatListListener.remove();
 
         chatListListener = chatsRef
                 .whereArrayContains("users", currentUserId)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshots, e) -> {
-                    if (e != null || snapshots == null) {
-                        Log.e("ChatFragment", "Listen failed: " + e.getMessage());
-                        return;
-                    }
+                    if (e != null || snapshots == null) return;
 
                     chatList.clear();
-
                     for (QueryDocumentSnapshot doc : snapshots) {
                         Chat chat = doc.toObject(Chat.class);
 
@@ -166,14 +144,17 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
                             }
                         }
 
-                        boolean isSoftDeletedByMe = chat.getDeletedAt() != null
-                                && chat.getDeletedAt().containsKey(currentUserId);
+                        long deletionTimestamp = 0;
+                        Map<String, Long> deletedAtMap = chat.getDeletedAt();
+                        if (deletedAtMap != null && deletedAtMap.containsKey(currentUserId)) {
+                            Long timestamp = deletedAtMap.get(currentUserId);
+                            if (timestamp != null) deletionTimestamp = timestamp;
+                        }
 
-                        if (otherUserId != null
-                                && studentMap.containsKey(otherUserId) // CRITICAL: Only process if user map is complete
-                                && !blockedUsersList.contains(otherUserId)
-                                && !isSoftDeletedByMe) {
+                        boolean shouldBeVisible = chat.getTimestamp() > deletionTimestamp;
 
+                        if (otherUserId != null && studentMap.containsKey(otherUserId)
+                                && !blockedUsersList.contains(otherUserId) && shouldBeVisible) {
                             chat.setChatId(doc.getId());
                             chatList.add(chat);
                         }
@@ -185,13 +166,9 @@ public class ChatFragment extends Fragment implements ChatListAdapter.OnChatSele
 
     private void checkIfEmpty() {
         if (recyclerView == null || emptyView == null) return;
-        if (chatList.isEmpty()) {
-            recyclerView.setVisibility(View.GONE);
-            emptyView.setVisibility(View.VISIBLE);
-        } else {
-            recyclerView.setVisibility(View.VISIBLE);
-            emptyView.setVisibility(View.GONE);
-        }
+        boolean isEmpty = chatList.isEmpty();
+        recyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+        emptyView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
     }
 
     @Override

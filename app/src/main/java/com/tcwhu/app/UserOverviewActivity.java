@@ -4,23 +4,22 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +28,7 @@ import java.util.stream.Collectors;
 
 public class UserOverviewActivity extends AppCompatActivity implements UserOverviewAdapter.OnActionListener {
 
+    private static final String TAG = "UserOverviewActivity";
     private RecyclerView recyclerView;
     private UserOverviewAdapter adapter;
     private List<Student> allStudentList;
@@ -40,12 +40,25 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
     private String currentFilter = "all";
     private String currentSearchQuery = "";
 
+    private ListenerRegistration userListener;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_overview);
 
         db = FirebaseFirestore.getInstance();
+        initViews();
+
+        allStudentList = new ArrayList<>();
+        filteredStudentList = new ArrayList<>();
+
+        setupRecyclerView();
+        setupFilterSpinner();
+        setupSearchListener();
+    }
+
+    private void initViews() {
         recyclerView = findViewById(R.id.usersRecyclerView);
         emptyView = findViewById(R.id.emptyView);
         inputSearch = findViewById(R.id.inputSearch);
@@ -53,21 +66,20 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
-
-        allStudentList = new ArrayList<>();
-        filteredStudentList = new ArrayList<>();
-
-        setupRecyclerView();
-        setupFilterSpinner(); // <-- UPDATED
-        setupSearchListener();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        loadAllStudents();
+        startRealtimeSync();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (userListener != null) userListener.remove();
     }
 
     private void setupRecyclerView() {
@@ -77,7 +89,6 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
     }
 
     private void setupFilterSpinner() {
-        // --- ADDED NEW FILTER ---
         String[] filters = new String[]{"All Users", "Verified Only", "Pending Only", "Suspended Only", "Banned Only", "Deletion Requests"};
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, filters);
         spinnerFilter.setAdapter(spinnerAdapter);
@@ -85,12 +96,10 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         spinnerFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // "Deletion Requests" becomes "deletion"
                 currentFilter = parent.getItemAtPosition(position).toString().toLowerCase().split(" ")[0];
                 applyFilters();
             }
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
     }
 
@@ -105,20 +114,29 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         });
     }
 
-    private void loadAllStudents() {
-        db.collection("users").get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
+    private void startRealtimeSync() {
+        if (userListener != null) userListener.remove();
+
+        userListener = db.collection("users")
+                .whereNotEqualTo("role", "admin")
+                .addSnapshotListener((snapshots, e) -> {
+                    if (e != null) {
+                        Log.e(TAG, "Listen failed: " + e);
+                        return;
+                    }
+
+                    if (snapshots != null) {
                         allStudentList.clear();
-                        for (QueryDocumentSnapshot document : task.getResult()) {
-                            // This uses the new fixed Student.java
-                            Student student = document.toObject(Student.class);
-                            student.setUserId(document.getId());
-                            allStudentList.add(student);
+                        for (QueryDocumentSnapshot document : snapshots) {
+                            try {
+                                Student student = document.toObject(Student.class);
+                                student.setUserId(document.getId());
+                                allStudentList.add(student);
+                            } catch (Exception ex) {
+                                Log.e(TAG, "Error parsing student", ex);
+                            }
                         }
                         applyFilters();
-                    } else {
-                        Toast.makeText(this, "Error loading users.", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -134,15 +152,14 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
                     boolean isVerified = student.isVerified();
                     boolean isBanned = student.isBanned();
                     boolean isSuspended = student.isSuspended();
-                    boolean isDeletionRequested = student.isDeletionRequested(); // <-- ADDED
+                    boolean isDeletionRequested = student.isDeletionRequested();
 
                     switch (currentFilter) {
                         case "verified": return isVerified && !isBanned && !isSuspended;
                         case "pending": return !isVerified && !isBanned && !isSuspended;
                         case "suspended": return isSuspended;
                         case "banned": return isBanned;
-                        case "deletion": return isDeletionRequested; // <-- ADDED
-                        case "all":
+                        case "deletion": return isDeletionRequested;
                         default: return true;
                     }
                 })
@@ -154,11 +171,10 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
     }
 
     private void checkIfEmpty() {
-        emptyView.setVisibility(filteredStudentList.isEmpty() ? View.VISIBLE : View.GONE);
-        recyclerView.setVisibility(filteredStudentList.isEmpty() ? View.GONE : View.VISIBLE);
+        boolean isEmpty = filteredStudentList.isEmpty();
+        emptyView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+        recyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
     }
-
-    // --- ACTION HANDLERS ---
 
     @Override
     public void onSuspend(String userId) {
@@ -172,18 +188,17 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
 
     @Override
     public void onUnsuspend(String userId) {
-        showConfirmationDialog("Unsuspend User", "Are you sure you want to lift this suspension?", userId, "unsuspend");
+        showConfirmationDialog("Unsuspend User", "Lift suspension?", userId, "unsuspend");
     }
 
     @Override
     public void onUnban(String userId) {
-        showConfirmationDialog("Unban User", "Are you sure you want to unban this user?", userId, "unban");
+        showConfirmationDialog("Unban User", "Unban this user?", userId, "unban");
     }
 
     @Override
     public void onDelete(String userId) {
-        // This is now "Approve Deletion" or "Force Delete"
-        showConfirmationDialog("Approve Deletion", "This will permanently remove this user's data and account immediately. Continue?", userId, "delete");
+        showConfirmationDialog("Approve Deletion", "This will permanently remove this user's data.", userId, "delete");
     }
 
     @Override
@@ -193,12 +208,10 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
         startActivity(intent);
     }
 
-    // --- ADDED: Handle the "Deny" button click ---
     @Override
     public void onDenyDeletion(String userId) {
-        showConfirmationDialog("Deny Request", "Deny this user's account deletion request?", userId, "deny_deletion");
+        showConfirmationDialog("Deny Request", "Deny account deletion request?", userId, "deny_deletion");
     }
-
 
     private void showConfirmationDialog(String title, String message, String userId, String action) {
         new AlertDialog.Builder(this)
@@ -211,12 +224,9 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
 
     private void executeUserAction(String userId, String action) {
         if ("delete".equals(action)) {
-            // This triggers your "deleteUserAccount" Cloud Function
             db.collection("users").document(userId).delete()
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "User deleted.", Toast.LENGTH_SHORT).show();
-                        loadAllStudents();
-                    });
+                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "User deleted.", Toast.LENGTH_SHORT).show())
+                    .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete.", Toast.LENGTH_SHORT).show());
             return;
         }
 
@@ -243,19 +253,14 @@ public class UserOverviewActivity extends AppCompatActivity implements UserOverv
                 updates.put("isBanned", false);
                 updates.put("deletionDate", 0L);
                 break;
-            // --- ADDED: The "Deny" action ---
             case "deny_deletion":
                 updates.put("isDeletionRequested", false);
-                updates.put("deletionReason", null); // Optional: clear the reason
+                updates.put("deletionReason", null);
                 break;
         }
 
         db.collection("users").document(userId).update(updates)
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "User " + action + " successfully.", Toast.LENGTH_SHORT).show();
-                    loadAllStudents();
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to update user.", Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Action completed.", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Action failed.", Toast.LENGTH_SHORT).show());
     }
 }

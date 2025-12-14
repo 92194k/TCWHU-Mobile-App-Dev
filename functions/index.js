@@ -3,26 +3,27 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { getAuth } from "firebase-admin/auth";
-
 import {
   onDocumentCreated,
   onDocumentUpdated,
   onDocumentDeleted
 } from "firebase-functions/v2/firestore";
-
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions";
 import { defineString } from "firebase-functions/params";
 import nodemailer from "nodemailer";
 
 // ---------------------------
-// PARAMS (Gmail credentials via environment params)
+// CONFIGURATION & CONSTANTS
 // ---------------------------
+const REGION = "asia-southeast2";
+const DEFAULT_TONE = "default_tone";
+
 const gmailEmail = defineString("GMAIL_EMAIL");
 const gmailPassword = defineString("GMAIL_PASSWORD");
 
 // ---------------------------
-// INIT
+// INITIALIZATION
 // ---------------------------
 initializeApp();
 const db = getFirestore();
@@ -44,58 +45,88 @@ const createTransporter = () => {
   });
 };
 
-// ---------------------------
-// 1. Chat Notification
-// ---------------------------
+/**
+ * 1. CHAT NOTIFICATION
+ * Trigger: Update on chats/{chatId}
+ * Description: Sends a HIGH PRIORITY push notification to the receiver.
+ */
 export const sendChatNotification = onDocumentUpdated(
   {
-    region: "asia-southeast2",
+    region: REGION,
     document: "chats/{chatId}",
   },
   async (event) => {
     try {
-      const after = event.data.after.data();
       const before = event.data.before.data();
-      if (!before || !after) return;
+      const after = event.data.after.data();
 
-      if (before.lastMessage === after.lastMessage) return;
+      // Ensure data exists and the lastMessage actually changed
+      if (!before || !after || before.lastMessage === after.lastMessage) return;
 
-      const lastMessage = after.lastMessage;
-      const lastSenderId = after.lastSenderId;
-      const users = after.users || [];
-      const receiverId = users.find(id => id !== lastSenderId);
+      const { lastMessage, lastSenderId, users = [] } = after;
+
+      // Identify Receiver (assumes 1-on-1 chat logic)
+      const receiverId = users.find((id) => id !== lastSenderId);
       if (!receiverId) return;
 
-      const senderDoc = await db.collection("users").doc(lastSenderId).get();
-      const senderName = senderDoc.exists ? senderDoc.data().nickname : "Someone";
+      // Fetch Sender and Receiver details in parallel for efficiency
+      const [senderSnap, receiverSnap] = await Promise.all([
+        db.collection("users").doc(lastSenderId).get(),
+        db.collection("users").doc(receiverId).get(),
+      ]);
 
-      const receiverDoc = await db.collection("users").doc(receiverId).get();
-      if (!receiverDoc.exists) return;
+      if (!receiverSnap.exists) return;
 
-      const token = receiverDoc.data().notificationToken;
+      const receiverData = receiverSnap.data();
+      const token = receiverData?.notificationToken;
+
       if (!token) return;
 
-      await messaging.send({
+      const senderName = senderSnap.exists ? senderSnap.data()?.nickname : "Someone";
+
+      const messagePayload = {
+        token,
+        // --- ADDED: Android High Priority Config ---
+        android: {
+          priority: "high", // Wakes the device immediately
+          notification: {
+            channelId: "high_importance_channel", // Matches Android code
+            sound: "default",
+            defaultSound: true,
+            priority: "max",
+            visibility: "public",
+          },
+        },
+        // -------------------------------------------
         notification: {
           title: `New message from ${senderName}`,
           body: lastMessage,
         },
-        token,
-      });
+        data: {
+          type: "chat",
+          senderId: lastSenderId,
+          otherUserId: lastSenderId,
+          title: `New message from ${senderName}`,
+          body: lastMessage,
+        },
+      };
 
-      logger.info(`Chat notification sent from ${senderName} to ${receiverId}`);
+      await messaging.send(messagePayload);
+      logger.info(`Chat notification sent to ${receiverId}`);
     } catch (err) {
       logger.error("Error sending chat notification:", err);
     }
   }
 );
 
-// ---------------------------
-// 2. Event Announcement
-// ---------------------------
+/**
+ * 2. EVENT ANNOUNCEMENT
+ * Trigger: Create on events/{eventId}
+ * Description: Multicasts a HIGH PRIORITY notification to all users.
+ */
 export const sendAnnouncementNotification = onDocumentCreated(
   {
-    region: "asia-southeast2",
+    region: REGION,
     document: "events/{eventId}",
   },
   async (event) => {
@@ -103,27 +134,61 @@ export const sendAnnouncementNotification = onDocumentCreated(
       const data = event.data.data();
       if (!data) return;
 
-      await messaging.send({
-        notification: {
-          title: data.title,
-          body: data.description,
-        },
-        topic: "all_users",
+      const { title, description: body } = data;
+      const eventId = event.params.eventId;
+
+      // Fetch all users to find tokens
+      const usersSnapshot = await db.collection("users").get();
+      const messages = [];
+
+      usersSnapshot.forEach((doc) => {
+        const userData = doc.data();
+        if (userData.notificationToken) {
+          messages.push({
+            token: userData.notificationToken,
+            // --- ADDED: Android High Priority Config ---
+            android: {
+              priority: "high",
+              notification: {
+                channelId: "high_importance_channel",
+                sound: "default",
+                defaultSound: true,
+                priority: "max",
+                visibility: "public",
+              },
+            },
+            // -------------------------------------------
+            notification: { title, body },
+            data: {
+              type: "event",
+              title,
+              body,
+              eventId,
+            },
+          });
+        }
       });
 
-      logger.info("Event notification sent.");
+      if (messages.length === 0) {
+        logger.info("No tokens found for event notification.");
+        return;
+      }
+
+      // Send via Multicast
+      await messaging.sendEach(messages);
+      logger.info(`Event notification sent to ${messages.length} users.`);
     } catch (err) {
       logger.error("Error sending event notification:", err);
     }
   }
 );
 
-// ---------------------------
-// 3. Delete User Account
-// ---------------------------
+/**
+ * 3. DELETE USER ACCOUNT
+ */
 export const deleteUserAccount = onDocumentDeleted(
   {
-    region: "asia-southeast2",
+    region: REGION,
     document: "users/{userId}",
   },
   async (event) => {
@@ -132,30 +197,29 @@ export const deleteUserAccount = onDocumentDeleted(
       await auth.deleteUser(userId);
       logger.info(`Deleted auth account for ${userId}`);
     } catch (err) {
-      logger.error("Error deleting auth account:", err);
+      logger.error(`Error deleting auth account for ${event.params.userId}:`, err);
     }
   }
 );
 
-// ---------------------------
-// 4. Daily Cleanup (banned users)
-// ---------------------------
+/**
+ * 4. DAILY CLEANUP
+ */
 export const dailyUserCleanup = onSchedule(
   {
-    region: "asia-southeast2",
+    region: REGION,
     schedule: "every 24 hours",
   },
   async () => {
     try {
-      logger.info("Running cleanup...");
+      logger.info("Running daily cleanup...");
       const now = Date.now();
 
-      const query = db.collection("users")
+      const snapshot = await db.collection("users")
         .where("isBanned", "==", true)
         .where("deletionDate", "<=", now)
-        .where("deletionDate", "!=", 0);
-
-      const snapshot = await query.get();
+        .where("deletionDate", "!=", 0)
+        .get();
 
       if (snapshot.empty) {
         logger.info("No users to delete.");
@@ -163,68 +227,85 @@ export const dailyUserCleanup = onSchedule(
       }
 
       const tasks = [];
-      snapshot.forEach(doc => {
-        tasks.push(auth.deleteUser(doc.id));
+      snapshot.forEach((doc) => {
+        tasks.push(
+          auth.deleteUser(doc.id).catch((e) =>
+            logger.warn(`Auth delete failed for ${doc.id}`, e)
+          )
+        );
         tasks.push(doc.ref.delete());
       });
 
       await Promise.all(tasks);
-      logger.info("Cleanup completed.");
+      logger.info(`Cleanup completed. Removed ${snapshot.size} users.`);
     } catch (err) {
       logger.error("Cleanup error:", err);
     }
   }
 );
 
-// ---------------------------
-// 5. SEND VERIFICATION EMAIL
-// Trigger when isVerified changes from false -> true
-// ---------------------------
+/**
+ * 5. SEND VERIFICATION EMAIL
+ */
 export const sendVerificationEmail = onDocumentUpdated(
   {
-    region: "asia-southeast2",
+    region: REGION,
     document: "users/{userId}",
   },
   async (event) => {
     try {
-      const userId = event.params.userId;
-      logger.info(`sendVerificationEmail TRIGGERED for: ${userId}`);
-
       const before = event.data.before.data();
       const after = event.data.after.data();
-      if (!before || !after) return;
 
-      logger.info(`Old isVerified: ${before.isVerified}, New isVerified: ${after.isVerified}`);
-
-      if (before.isVerified === false && after.isVerified === true) {
-        const email = after.email;
-        const name = after.nickname || after.name || "Student";
-
-        if (!email) {
-          logger.error("No email on user; cannot send verification email.");
-          return;
-        }
-
-        const transporter = createTransporter();
-
-        const mailOptions = {
-          from: `TCWHU Admin <${gmailEmail.value()}>`,
-          to: email,
-          subject: "Your Account Has Been Approved ✓",
-          html: `
-            <h2>Account Approved 🎉</h2>
-            <p>Hello <strong>${name}</strong>,</p>
-            <p>Your TCWHU account has been verified and approved. You may now log in to the mobile app.</p>
-          `,
-        };
-
-        await transporter.sendMail(mailOptions);
-        logger.info(`Verification email SENT to ${email}`);
-      } else {
-        logger.info("isVerified did NOT change false → true; skipping.");
+      if (
+        !before ||
+        !after ||
+        !(before.isVerified === false && after.isVerified === true)
+      ) {
+        return;
       }
+
+      const { email, nickname, name } = after;
+      const recipientName = nickname || name || "Student";
+
+      if (!email) {
+        logger.warn(`User ${event.params.userId} verified but has no email.`);
+        return;
+      }
+
+      const transporter = createTransporter();
+      const htmlContent = getVerificationEmailTemplate(recipientName);
+
+      await transporter.sendMail({
+        from: `TCWHU Admin <${gmailEmail.value()}>`,
+        to: email,
+        subject: "Your Account Has Been Approved ✓",
+        html: htmlContent,
+      });
+
+      logger.info(`Verification email SENT to ${email}`);
     } catch (err) {
       logger.error("sendVerificationEmail error:", err);
     }
   }
 );
+
+// ---------------------------
+// HTML TEMPLATES
+// ---------------------------
+function getVerificationEmailTemplate(name) {
+  return `
+    <!DOCTYPE html>
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+          <h2 style="color: #2c3e50;">Welcome, ${name}!</h2>
+          <p>We are pleased to inform you that your account has been successfully <strong>approved</strong>.</p>
+          <p>You may now log in to the application and access all features.</p>
+          <br />
+          <p>Best Regards,<br/><strong>TCWHU Admin Team</strong></p>
+        </div>
+      </body>
+    </html>
+  `;
+}

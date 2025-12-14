@@ -8,13 +8,10 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.resource.bitmap.CenterCrop;
-import com.bumptech.glide.request.RequestOptions;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.function.Consumer;
 
 public class EventsManagementAdapter extends RecyclerView.Adapter<EventsManagementAdapter.ViewHolder> {
 
@@ -41,8 +38,7 @@ public class EventsManagementAdapter extends RecyclerView.Adapter<EventsManageme
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Event event = events.get(position);
-        holder.bind(event, listener);
+        holder.bind(events.get(position), listener);
     }
 
     @Override
@@ -97,15 +93,11 @@ public class EventsManagementAdapter extends RecyclerView.Adapter<EventsManageme
             }
 
             deleteButton.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onDelete(event);
-                }
+                if (listener != null) listener.onDelete(event);
             });
 
             itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onEventClick(event);
-                }
+                if (listener != null) listener.onEventClick(event);
             });
         }
     }

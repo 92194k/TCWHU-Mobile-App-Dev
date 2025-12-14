@@ -6,22 +6,15 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.firestore.Query; // IMPORT ADDED for lookup
-import com.google.firebase.firestore.QuerySnapshot; // IMPORT ADDED for lookup
-import com.google.firebase.messaging.FirebaseMessaging; // IMPORT ADDED for token
-
+import com.google.firebase.messaging.FirebaseMessaging;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -74,7 +67,6 @@ public class StudentLoginActivity extends AppCompatActivity {
             return;
         }
 
-        // --- CRITICAL CHANGE: Use Firestore to find the actual email for login ---
         db.collection("users")
                 .whereEqualTo("studentNumber", studentNumber)
                 .limit(1)
@@ -85,15 +77,13 @@ public class StudentLoginActivity extends AppCompatActivity {
                         if (email != null) {
                             attemptFirebaseLogin(email, password);
                         } else {
-                            Toast.makeText(StudentLoginActivity.this, "Error: User email not found in database.", Toast.LENGTH_LONG).show();
+                            Toast.makeText(this, "Error: User email not found in database.", Toast.LENGTH_LONG).show();
                         }
                     } else {
-                        Toast.makeText(StudentLoginActivity.this, "Authentication failed. Please check your Student Number.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Authentication failed. Please check your Student Number.", Toast.LENGTH_LONG).show();
                     }
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(StudentLoginActivity.this, "Login error. Check connection.", Toast.LENGTH_LONG).show();
-                });
+                .addOnFailureListener(e -> Toast.makeText(this, "Login error. Check connection.", Toast.LENGTH_LONG).show());
     }
 
     private void attemptFirebaseLogin(String email, String password) {
@@ -105,18 +95,11 @@ public class StudentLoginActivity extends AppCompatActivity {
                             checkUserStatusAndNavigate(user.getUid());
                         }
                     } else {
-                        // This handles incorrect password/generic auth errors for the real email
-                        Toast.makeText(StudentLoginActivity.this, "Authentication failed. Incorrect password.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Authentication failed. Incorrect password.", Toast.LENGTH_LONG).show();
                     }
                 });
     }
 
-    /**
-     * CRITICAL LOGIC FOR FORGOT PASSWORD:
-     * 1. Takes the Student Number.
-     * 2. LOOKS UP the actual email address in Firestore.
-     * 3. Calls the Firebase method to send the reset link to that looked-up email.
-     */
     private void handleForgotPassword() {
         String studentNumber = inputStudentNumber.getText().toString().trim();
 
@@ -125,7 +108,6 @@ public class StudentLoginActivity extends AppCompatActivity {
             return;
         }
 
-        // 1. Query Firestore for the user's actual email address
         db.collection("users")
                 .whereEqualTo("studentNumber", studentNumber)
                 .limit(1)
@@ -133,49 +115,32 @@ public class StudentLoginActivity extends AppCompatActivity {
                 .addOnSuccessListener(querySnapshot -> {
                     if (!querySnapshot.isEmpty()) {
                         String userEmail = querySnapshot.getDocuments().get(0).getString("email");
-
                         if (userEmail != null) {
-                            // 2. Send reset email using the actual email found
                             mAuth.sendPasswordResetEmail(userEmail)
                                     .addOnCompleteListener(task -> {
                                         if (task.isSuccessful()) {
                                             showForgotDialog(userEmail);
                                         } else {
-                                            // Security Vague Message: If Firebase rejects the email (e.g., deleted), show this.
-                                            Toast.makeText(StudentLoginActivity.this,
-                                                    "If the account exists, a password reset link has been sent.",
-                                                    Toast.LENGTH_LONG).show();
+                                            Toast.makeText(this, "If the account exists, a password reset link has been sent.", Toast.LENGTH_LONG).show();
                                         }
                                     });
                         } else {
-                            Toast.makeText(StudentLoginActivity.this,
-                                    "Account not found.",
-                                    Toast.LENGTH_LONG).show();
+                            Toast.makeText(this, "Account not found.", Toast.LENGTH_LONG).show();
                         }
                     } else {
-                        // Display a generic message for security purposes
-                        Toast.makeText(StudentLoginActivity.this,
-                                "If the account exists, a password reset link has been sent.",
-                                Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "If the account exists, a password reset link has been sent.", Toast.LENGTH_LONG).show();
                     }
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(StudentLoginActivity.this,
-                            "Error checking database for account.",
-                            Toast.LENGTH_LONG).show();
-                });
+                .addOnFailureListener(e -> Toast.makeText(this, "Error checking database for account.", Toast.LENGTH_LONG).show());
     }
 
     private void showForgotDialog(String email) {
         new AlertDialog.Builder(this)
                 .setTitle("Password Reset Email Sent")
-                .setMessage("A link to reset your password has been sent to the following email address: " + email + ". Please check your inbox.")
+                .setMessage("A link to reset your password has been sent to: " + email + ". Please check your inbox.")
                 .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
                 .show();
     }
-
-    // NOTE: saveFCMToken method has been removed from this file as it was incomplete
-    // and would better belong with the successful login or other appropriate lifecycle event.
 
     private void checkUserStatusAndNavigate(String userId) {
         db.collection("users").document(userId).get()
@@ -211,14 +176,12 @@ public class StudentLoginActivity extends AppCompatActivity {
                                 navigateToSuspendedScreen(message);
                                 return;
                             } else {
-                                Log.d("LoginActivity", "Suspension ended. Re-activating user.");
                                 doc.getReference().update("isSuspended", false, "suspendEndDate", 0);
                             }
                         }
 
                         if (student.isVerified()) {
                             FirebaseMessaging.getInstance().subscribeToTopic("all_users");
-                            // saveFCMToken(userId); // Re-introduce or fix this call if needed
                             navigateTo(StudentHomeActivity.class);
                         } else {
                             navigateTo(PendingVerificationActivity.class);
@@ -240,7 +203,7 @@ public class StudentLoginActivity extends AppCompatActivity {
 
     private void navigateToSuspendedScreen(String message) {
         mAuth.signOut();
-        Intent intent = new Intent(StudentLoginActivity.this, AccountSuspendedActivity.class);
+        Intent intent = new Intent(this, AccountSuspendedActivity.class);
         intent.putExtra("STATUS_MESSAGE", message);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
@@ -249,7 +212,6 @@ public class StudentLoginActivity extends AppCompatActivity {
 
     private String formatDate(long timestamp) {
         if (timestamp == 0) return "an unknown date";
-        SimpleDateFormat sdf = new SimpleDateFormat("MMM d, yyyy", Locale.getDefault());
-        return sdf.format(new Date(timestamp));
+        return new SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(new Date(timestamp));
     }
 }

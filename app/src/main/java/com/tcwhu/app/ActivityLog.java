@@ -12,13 +12,11 @@ public class ActivityLog implements Serializable {
 
     public ActivityLog() {}
 
-    // Getters
     public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
     public String getAdminId() { return adminId; }
     public String getAction() { return action; }
     public String getTargetId() { return targetId; }
     public long getTimestamp() { return timestamp; }
-
-    // Setters
-    public void setId(String id) { this.id = id; }
 }

@@ -75,9 +75,7 @@ public class AvatarAdapter extends RecyclerView.Adapter<AvatarAdapter.AvatarView
         public void bind(final String avatar) {
             avatarTextView.setText(avatar);
             itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onAvatarClick(avatar);
-                }
+                if (listener != null) listener.onAvatarClick(avatar);
             });
         }
     }

@@ -7,12 +7,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.google.android.material.button.MaterialButton;
-
 import java.util.List;
 
 public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapter.ViewHolder> {
@@ -22,9 +19,9 @@ public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapte
         void onBan(String userId);
         void onUnsuspend(String userId);
         void onUnban(String userId);
-        void onDelete(String userId); // This is now "Approve Deletion" or "Force Delete"
+        void onDelete(String userId);
         void onReview(Student student);
-        void onDenyDeletion(String userId); // <-- ADDED
+        void onDenyDeletion(String userId);
     }
 
     private List<Student> studentList;
@@ -72,27 +69,18 @@ public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapte
             textAvatar.setText(student.getAvatar() != null ? student.getAvatar() : "👤");
             textNickname.setText(student.getNickname() != null ? student.getNickname() : "Unknown");
 
-            // Default state
             buttonSuspend.setVisibility(View.GONE);
             buttonBan.setVisibility(View.GONE);
-            buttonDelete.setImageTintList(ColorStateList.valueOf(Color.parseColor("#B71C1C"))); // Default red tint
+            buttonDelete.setImageTintList(ColorStateList.valueOf(Color.parseColor("#B71C1C")));
             textStudentNumber.setText(student.getStudentNumber() != null ? student.getStudentNumber() : "N/A");
 
-            // --- NEW LOGIC (HIGHEST PRIORITY) ---
             if (student.isDeletionRequested()) {
                 setStatus("#D32F2F", "DELETION REQUEST");
-
-                // Show the reason
-                String studentNum = student.getStudentNumber() != null ? student.getStudentNumber() : "N/A";
                 String reason = student.getDeletionReason() != null ? student.getDeletionReason() : "No reason given.";
-                textStudentNumber.setText(studentNum + "\nReason: " + reason);
+                textStudentNumber.setText((student.getStudentNumber() != null ? student.getStudentNumber() : "N/A") + "\nReason: " + reason);
 
-                // Re-use "Suspend" button as "DENY"
                 configureButton(buttonSuspend, "DENY", Color.parseColor("#388E3C"), v -> listener.onDenyDeletion(student.getUserId()));
                 buttonSuspend.setVisibility(View.VISIBLE);
-
-                // The "Delete" button (trash can) now functions as "APPROVE"
-                // We'll add a green tint to show it's an "approve" action
                 buttonDelete.setImageTintList(ColorStateList.valueOf(Color.parseColor("#388E3C")));
 
             } else if (student.isBanned()) {
@@ -111,7 +99,6 @@ public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapte
                 buttonBan.setVisibility(View.VISIBLE);
 
             } else {
-                // User is VERIFIED
                 setStatus("#388E3C", "VERIFIED");
                 configureButton(buttonSuspend, "SUSPEND", Color.parseColor("#F57C00"), v -> listener.onSuspend(student.getUserId()));
                 configureButton(buttonBan, "BAN", Color.parseColor("#B71C1C"), v -> listener.onBan(student.getUserId()));
@@ -119,7 +106,6 @@ public class UserOverviewAdapter extends RecyclerView.Adapter<UserOverviewAdapte
                 buttonBan.setVisibility(View.VISIBLE);
             }
 
-            // The "Delete" button click listener is always the same.
             buttonDelete.setOnClickListener(v -> listener.onDelete(student.getUserId()));
         }
 
